@@ -6,22 +6,21 @@ from IPython.core.interactiveshell import InteractiveShell
 InteractiveShell.ast_node_interactivity = "all"
 
 
-# %%
-import seaborn as sns
-from matplotlib import pyplot as plt
-import numpy as np
-import pandas as pd
-
-
-# %%
-from tempfile import mkdtemp
-from joblib import Memory, dump, load
-
+import json
 
 # %%
 import sqlite3
-import json
 
+# %%
+from tempfile import mkdtemp
+
+import numpy as np
+import pandas as pd
+
+# %%
+import seaborn as sns
+from joblib import Memory, dump, load
+from matplotlib import pyplot as plt
 
 # %%
 with open("../config.json", "r") as f:
@@ -52,61 +51,56 @@ MODEL_REPOSITORY_LOCATION = config[1]["model_repository_location"]
 
 
 # %%
-from StatisticalTest import ChiSquare
-from CustomPipeline import (
-    CardinalityReducer,
-    get_ct_feature_names,
-    SelectColumnsTransfomer,
-)
-from feature_importance import FeatureImportance
-
-
-# %%
 from imblearn import pipeline as imb_pipeline
 from imblearn.over_sampling import SMOTE, RandomOverSampler
+from sklearn.compose import ColumnTransformer, make_column_transformer
 
+# %%
+from sklearn.decomposition import PCA, IncrementalPCA
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.ensemble import (
+    BaggingClassifier,
+    ExtraTreesClassifier,
+    RandomForestClassifier,
+    VotingClassifier,
+)
+from sklearn.impute import SimpleImputer
+
+# %%
+from sklearn.linear_model import LogisticRegression
 
 # %%
 from sklearn.metrics import (
     accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
     precision_score,
     recall_score,
-    classification_report,
-    f1_score,
-    confusion_matrix,
     roc_auc_score,
 )
-
-
-# %%
-from sklearn.linear_model import LogisticRegression
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.svm import SVC
-from sklearn.ensemble import (
-    RandomForestClassifier,
-    ExtraTreesClassifier,
-    VotingClassifier,
-    BaggingClassifier,
-)
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import KFold, RandomizedSearchCV, cross_val_score
 from sklearn.naive_bayes import GaussianNB
-from sklearn.model_selection import KFold, cross_val_score, RandomizedSearchCV
-
-
-# %%
-from sklearn.decomposition import PCA, IncrementalPCA
-from sklearn.compose import ColumnTransformer, make_column_transformer
-from sklearn.impute import SimpleImputer
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import (
     MinMaxScaler,
     OneHotEncoder,
-    StandardScaler,
-    LabelEncoder,
     OrdinalEncoder,
+    StandardScaler,
 )
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
 
+from CustomPipeline import (
+    CardinalityReducer,
+    SelectColumnsTransfomer,
+    get_ct_feature_names,
+)
+from feature_importance import FeatureImportance
+
+# %%
+from StatisticalTest import ChiSquare
 
 # %%
 conn_object = sqlite3.connect("../database/cms_data.db")
@@ -115,15 +109,8 @@ conn_object = sqlite3.connect("../database/cms_data.db")
 # %%
 query_string = """SELECT inp.DESYNPUF_ID, inp.CLM_FROM_DT AS CLM_FROM_DT_INP, inp.CLM_THRU_DT AS CLM_THRU_DT_INP, inp.PRVDR_NUM AS PRVDR_NUM_INP, inp.CLM_PMT_AMT AS CLM_PMT_AMT_INP, inp.NCH_PRMRY_PYR_CLM_PD_AMT AS NCH_PRMRY_PYR_CLM_PD_AMT_INP, inp.AT_PHYSN_NPI AS AT_PHYSN_NPI_INP, inp.OP_PHYSN_NPI AS OP_PHYSN_NPI_INP, inp.CLM_ADMSN_DT AS CLM_ADMSN_DT_INP, inp.CLM_PASS_THRU_PER_DIEM_AMT AS CLM_PASS_THRU_PER_DIEM_AMT_INP, inp.NCH_BENE_IP_DDCTBL_AMT AS NCH_BENE_IP_DDCTBL_AMT_INP, inp.NCH_BENE_PTA_COINSRNC_LBLTY_AM AS NCH_BENE_PTA_COINSRNC_LBLTY_AM_INP, inp.NCH_BENE_BLOOD_DDCTBL_LBLTY_AM AS NCH_BENE_BLOOD_DDCTBL_LBLTY_AM_INP, inp.CLM_UTLZTN_DAY_CNT AS CLM_UTLZTN_DAY_CNT_INP, inp.NCH_BENE_DSCHRG_DT AS NCH_BENE_DSCHRG_DT_INP, inp.CLM_DRG_CD AS CLM_DRG_CD_INP, inp.PRVDR_NUM_CAT AS PRVDR_NUM_CAT_INP, inp.Next_CLM_ADMSN_DT AS Next_CLM_ADMSN_DT_INP, 
 inp.Readmission_within_30days AS Readmission_within_30days_INP, inp.CLAIM_YEAR AS CLAIM_YEAR_INP, inp.ADMTNG_ICD9_DGNS_CD_CAT AS ADMTNG_ICD9_DGNS_CD_CAT_INP, inp.ICD9_DGNS_CD_1_CAT AS ICD9_DGNS_CD_1_CAT_INP, inp.ICD9_DGNS_CD_2_CAT AS ICD9_DGNS_CD_2_CAT_INP, inp.ICD9_DGNS_CD_3_CAT AS ICD9_DGNS_CD_3_CAT_INP, inp.ICD9_DGNS_CD_4_CAT AS ICD9_DGNS_CD_4_CAT_INP, 
-inp.ICD9_DGNS_CD_5_CAT AS ICD9_DGNS_CD_5_CAT_INP, inp.ICD9_DGNS_CD_6_CAT AS ICD9_DGNS_CD_6_CAT_INP, inp.ICD9_DGNS_CD_7_CAT AS ICD9_DGNS_CD_7_CAT_INP, inp.ICD9_DGNS_CD_8_CAT AS ICD9_DGNS_CD_8_CAT_INP, inp.ICD9_DGNS_CD_9_CAT AS ICD9_DGNS_CD_9_CAT_INP, inp.ICD9_PRCDR_CD_1_CAT AS ICD9_PRCDR_CD_1_CAT_INP, 
-out.CLM_FROM_DT as CLM_FROM_DT_OUT, out.CLM_THRU_DT as CLM_THRU_DT_OUT, out.PRVDR_NUM as PRVDR_NUM_OUT, out.CLM_PMT_AMT as CLM_PMT_AMT_OUT, 
-out.NCH_PRMRY_PYR_CLM_PD_AMT as NCH_PRMRY_PYR_CLM_PD_AMT_OUT, out.AT_PHYSN_NPI as AT_PHYSN_NPI_OUT, out.NCH_BENE_BLOOD_DDCTBL_LBLTY_AM as NCH_BENE_BLOOD_DDCTBL_LBLTY_AM_OUT, 
-out.ICD9_DGNS_CD_1 as ICD9_DGNS_CD_1_OUT, out.ICD9_DGNS_CD_2 as ICD9_DGNS_CD_2_OUT, out.NCH_BENE_PTB_DDCTBL_AMT as NCH_BENE_PTB_DDCTBL_AMT_OUT, 
-out.NCH_BENE_PTB_COINSRNC_AMT as NCH_BENE_PTB_COINSRNC_AMT_OUT, out.HCPCS_CD_1 as HCPCS_CD_1_OUT, out.HCPCS_CD_2 as HCPCS_CD_2_OUT, out.HCPCS_CD_3 as HCPCS_CD_3_OUT, out.PRVDR_NUM_CAT as PRVDR_NUM_CAT_OUT, OUT.ICD9_DGNS_CD_1_CAT AS ICD9_DGNS_CD_1_CAT_OUT,OUT.ICD9_DGNS_CD_2_CAT AS ICD9_DGNS_CD_2_CAT_OUT,OUT.HCPCS_CD_1_CAT AS HCPCS_CD_1_CAT_OUT, OUT.HCPCS_CD_2_CAT AS HCPCS_CD_2_CAT_OUT,
-OUT.HCPCS_CD_3_CAT AS HCPCS_CD_3_CAT_OUT, OUT.HCPCS_CD_1_CAT_DESC AS HCPCS_CD_1_CAT_DESC_OUT, OUT.HCPCS_CD_2_CAT_DESC AS HCPCS_CD_2_CAT_DESC_OUT, OUT.HCPCS_CD_3_CAT_DESC AS HCPCS_CD_3_CAT_DESC_OUT
-FROM Inpatient_claims_2 inp LEFT JOIN Outpatient_claims_2 out 
-on inp.DESYNPUF_ID = out.DESYNPUF_ID 
-WHERE inp.NCH_BENE_DSCHRG_DT <= out.CLM_FROM_DT AND inp.Next_CLM_ADMSN_DT >= out.CLM_FROM_DT
+inp.ICD9_DGNS_CD_5_CAT AS ICD9_DGNS_CD_5_CAT_INP, inp.ICD9_DGNS_CD_6_CAT AS ICD9_DGNS_CD_6_CAT_INP, inp.ICD9_DGNS_CD_7_CAT AS ICD9_DGNS_CD_7_CAT_INP, inp.ICD9_DGNS_CD_8_CAT AS ICD9_DGNS_CD_8_CAT_INP, inp.ICD9_DGNS_CD_9_CAT AS ICD9_DGNS_CD_9_CAT_INP, inp.ICD9_PRCDR_CD_1_CAT AS ICD9_PRCDR_CD_1_CAT_INP
+FROM Inpatient_claims_2 inp
 """
 
 
@@ -137,8 +124,8 @@ claim_data = pd.read_sql_query(
         "CLM_ADMSN_DT_INP": {"format": "%Y-%m-%d"},
         "NCH_BENE_DSCHRG_DT_INP": {"format": "%Y-%m-%d"},
         "Next_CLM_ADMSN_DT_INP": {"format": "%Y-%m-%d"},
-        "CLM_FROM_DT_OUT": {"format": "%Y-%m-%d"},
-        "CLM_THRU_DT_OUT": {"format": "%Y-%m-%d"},
+        # "CLM_FROM_DT_OUT": {"format": "%Y-%m-%d"},
+        # "CLM_THRU_DT_OUT": {"format": "%Y-%m-%d"},
     },
 )
 
@@ -230,12 +217,12 @@ categorical_features = [
     "ICD9_DGNS_CD_8_CAT_INP",
     "ICD9_DGNS_CD_9_CAT_INP",
     "ICD9_PRCDR_CD_1_CAT_INP",
-    "PRVDR_NUM_CAT_OUT",
-    "HCPCS_CD_1_CAT_OUT",
-    "HCPCS_CD_2_CAT_OUT",
-    "HCPCS_CD_3_CAT_OUT",
-    "ICD9_DGNS_CD_1_CAT_OUT",
-    "ICD9_DGNS_CD_2_CAT_OUT",
+    # "PRVDR_NUM_CAT_OUT",
+    # "HCPCS_CD_1_CAT_OUT",
+    # "HCPCS_CD_2_CAT_OUT",
+    # "HCPCS_CD_3_CAT_OUT",
+    # "ICD9_DGNS_CD_1_CAT_OUT",
+    # "ICD9_DGNS_CD_2_CAT_OUT",
     "Readmission_within_30days_INP",
     # "BENE_AGE_CAT"
     # "AT_PHYSN_NPI_OUT",
@@ -257,15 +244,15 @@ cols_to_drop = [
     "CLAIM_YEAR_INP",
     "PRVDR_NUM_INP",
     "CLM_DRG_CD_INP",
-    "PRVDR_NUM_OUT",
-    "ICD9_DGNS_CD_1_OUT",
-    "ICD9_DGNS_CD_2_OUT",
-    "HCPCS_CD_1_OUT",
-    "HCPCS_CD_2_OUT",
-    "HCPCS_CD_3_OUT",
-    "HCPCS_CD_1_CAT_DESC_OUT",
-    "HCPCS_CD_2_CAT_DESC_OUT",
-    "HCPCS_CD_3_CAT_DESC_OUT",
+    # "PRVDR_NUM_OUT",
+    # "ICD9_DGNS_CD_1_OUT",
+    # "ICD9_DGNS_CD_2_OUT",
+    # "HCPCS_CD_1_OUT",
+    # "HCPCS_CD_2_OUT",
+    # "HCPCS_CD_3_OUT",
+    # "HCPCS_CD_1_CAT_DESC_OUT",
+    # "HCPCS_CD_2_CAT_DESC_OUT",
+    # "HCPCS_CD_3_CAT_DESC_OUT",
 ]
 date_cols = list(final_df.select_dtypes(include="datetime").columns)
 npi_cols = [col for col in final_df.select_dtypes(include="number") if "NPI" in col]
@@ -290,30 +277,32 @@ df.drop(columns=cols_to_drop + date_cols + npi_cols, inplace=True, axis=1)
 # %%
 df.dtypes
 
-
+#%%
+# Check - 1 dropping columns as per feature importance
+# df.drop(columns="BENRES_IP", inplace=True, axis=1)
 # %%
-# from pandas_profiling import ProfileReport
+from pandas_profiling import ProfileReport
 
-# eda_report = ProfileReport(
-#     df,
-#     title="Exploratory Data Analysis",
-#     minimal=True,
-#     interactions={"continuous": False},
-#     missing_diagrams={
-#         "bar": True,
-#         "matrix": True,
-#         "heatmap": True,
-#         "dendrogram": True,
-#     },
-#     correlations= {
-#             "pearson": {"calculate": True},
-#             "spearman": {"calculate": True},
-#             "kendall": {"calculate": True},
-#             "phi_k": {"calculate": True},
-#             "cramers": {"calculate": True},
-#         },
-# )
-# eda_report.to_file(f"{EDA_REPORT_LOCATION}\final_df_eda_report.html")
+eda_report = ProfileReport(
+    df,
+    title="Exploratory Data Analysis",
+    minimal=True,
+    interactions={"continuous": False},
+    missing_diagrams={
+        "bar": True,
+        "matrix": True,
+        "heatmap": True,
+        "dendrogram": True,
+    },
+    correlations={
+        "pearson": {"calculate": True},
+        "spearman": {"calculate": True},
+        "kendall": {"calculate": True},
+        "phi_k": {"calculate": True},
+        "cramers": {"calculate": True},
+    },
+)
+eda_report.to_file(f"{EDA_REPORT_LOCATION}\\final_df_eda_report.html")
 
 
 # %%
@@ -382,7 +371,6 @@ sns.heatmap(
 
 
 # %%
-# #%%
 # # Very high correlation between ('BENRES_OP', 'MEDREIMB_OP') & ('BENRES_CAR', 'MEDREIMB_CAR') hence dropping one column in the pair
 
 X_train.drop(columns=["MEDREIMB_OP", "MEDREIMB_CAR"], inplace=True)
@@ -415,7 +403,7 @@ X_test.columns
 
 
 # %%
-# Imputation objects
+# Preprocessing objects
 std_scalar = StandardScaler()
 min_max_scalar = MinMaxScaler()
 onehot_encoder = OneHotEncoder(drop="first", sparse=False)
@@ -501,18 +489,12 @@ X_test_transformed = pd.DataFrame(
 
 
 # %%
-X_train_transformed
+X_train_transformed.head()
 
 
 # %%
 y_train = y_train.reset_index().drop(columns="index", axis=1).values.ravel()
 y_test = y_test.reset_index().drop(columns="index", axis=1).values.ravel()
-
-
-# %%
-y_train
-y_test
-
 
 # %%
 lr = LogisticRegression(random_state=RANDOM_STATE)
@@ -549,8 +531,6 @@ dt_pipeline = Pipeline(
     ]
 )
 
-
-# %%
 dt_smote_pipeline = imb_pipeline.Pipeline(
     [
         ("Preprocessing Step", preprocessing_pipeline),
@@ -585,6 +565,9 @@ def fit_predict(pipeline):
     model = pipeline.fit(X_train, y_train)
     y_pred = model.predict(X_test)
     print(f'{"="*40} {pipeline.steps[-1][-1]} {"="*50}')
+    print(f'{"="*40} {"Training Metrics"} {"="*50}')
+    getMetricsData(y_train, model.predict(X_train))
+    print(f'{"="*40} {"Testing Metrics"} {"="*50}')
     getMetricsData(y_test, y_pred)
 
 
@@ -643,7 +626,8 @@ rand_grid_search = RandomizedSearchCV(
     verbose=4,
 )
 
-
+#%%
+rand_grid_search.fit(X_train, y_train)
 # %%
 num_folds = 5
 seed = 7
@@ -673,19 +657,12 @@ models.append(("NB", gnb))
 # # Ensembling Classifiers
 
 # %%
-from hpsklearn import HyperoptEstimator, extra_trees, random_forest, decision_tree
-from hyperopt import (
-    hp,
-    fmin,
-    tpe,
-    rand,
-    pyll,
-    STATUS_OK,
-    STATUS_FAIL,
-    Trials,
-    space_eval,
+from hpsklearn import (
+    HyperoptEstimator,
+    extra_trees,
+    random_forest,
 )
-
+from hyperopt import tpe
 
 # %%
 estim_extratrees = HyperoptEstimator(
@@ -702,6 +679,7 @@ estim_extratrees.score(X_test_transformed.to_numpy(), y_test)
 
 estim_extratrees.best_model()["learner"]
 
+#%%
 extratrees_clf = estim_extratrees.best_model()["learner"]
 
 
@@ -723,9 +701,27 @@ extratrees_clf_pipeline = Pipeline(
     ]
 )
 
+extratrees_smt_pipeline = imb_pipeline.Pipeline(
+    [
+        ("Preprocessing Step", preprocessing_pipeline),
+        ("SMOTE oversampling", smt),
+        ("Extratrees_Classifier", extratrees_clf),
+    ]
+)
+
+
+extratrees_randover_pipeline = imb_pipeline.Pipeline(
+    [
+        ("Preprocessing Step", preprocessing_pipeline),
+        ("Random oversampling", random_oversampling),
+        ("Extratrees_Classifier", extratrees_clf),
+    ]
+)
 
 # %%
 fit_predict(extratrees_clf_pipeline)
+fit_predict(extratrees_smt_pipeline)
+fit_predict(extratrees_randover_pipeline)
 
 
 # %%
@@ -765,51 +761,33 @@ rfc_clf_pipeline = Pipeline(
     ]
 )
 
+rfc_smt_pipeline = imb_pipeline.Pipeline(
+    [
+        ("Preprocessing Step", preprocessing_pipeline),
+        ("SMOTE oversampling", smt),
+        ("Extratrees_Classifier", rfc_model_1),
+    ]
+)
+
+rfc_randover_pipeline = imb_pipeline.Pipeline(
+    [
+        ("Preprocessing Step", preprocessing_pipeline),
+        ("random oversampling", random_oversampling),
+        ("Extratrees_Classifier", rfc_model_1),
+    ]
+)
+
 
 # %%
 fit_predict(rfc_clf_pipeline)
-
-
-# %%
-fit_predict(rfc_clf_pipeline)
+fit_predict(rfc_smt_pipeline)
+fit_predict(rfc_randover_pipeline)
 
 
 # %%
 # dump(rfc_model_1, f'{MODEL_REPOSITORY_LOCATION}\RandomForestEstimator.joblib')
 
 # dump(rfc_clf_pipeline, f'{MODEL_REPOSITORY_LOCATION}\RandomForestPipeline.joblib', compress=1)
-
-
-# %%
-fit_predict(extratrees_clf_pipeline)
-
-
-# %%
-
-
-# %%
-X_train_transformed_sampled, y_train_sampled = smt.fit_sample(
-    X_train_transformed, y_train
-)
-
-
-# %%
-estim_rfc = HyperoptEstimator(
-    classifier=random_forest("rfc_clf"),
-    preprocessing=[],
-    algo=tpe.suggest,
-    max_evals=20,
-    trial_timeout=300,
-)
-
-estim_rfc.fit(X_train_transformed_sampled.to_numpy(), y_train_sampled)
-
-estim_rfc.score(X_test_transformed.to_numpy(), y_test)
-
-estim_rfc.best_model()["learner"]
-
-rfc_clf = estim_rfc.best_model()["learner"]
-
 
 # %%
 estimators = [
@@ -843,7 +821,7 @@ getMetricsData(y_true=y_test, y_pred=y_pred)
 
 # %%
 bagg_clf = BaggingClassifier(
-    base_estimator=rfc_model_1,
+    base_estimator=rfc_clf_pipeline.steps[-1][-1],
     n_estimators=10,
     random_state=RANDOM_STATE,
     max_samples=0.8,
@@ -901,6 +879,27 @@ getMetricsData(y_test, y_pred)
 # %%
 conn_object.close()
 
+
+# %%
+from xgboost import XGBClassifier
+
+# %%
+xgboost = XGBClassifier(
+    learning_rate=0.01,
+    max_delta_step=1,
+    max_depth=10,
+    n_estimators=500,
+    n_jobs=-1,
+    num_parallel_tree=10,
+    random_state=RANDOM_STATE,
+    reg_alpha=0.01,
+    reg_lambda=0.01,
+    scale_pos_weight=0.5,
+    verbosity=1,
+)
+
+
+# %%
 
 # %%
 
