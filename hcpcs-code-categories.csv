@@ -1,0 +1,174 @@
+Code Range,Description
+00100-00222,Anesthesia for Procedures on the Head
+00300-00352,Anesthesia for Procedures on the Neck
+00400-00474,Anesthesia for Procedures on the Thorax (Chest Wall and Shoulder Girdle)
+00500-00580,Anesthesia for Intrathoracic Procedures
+00600-00670,Anesthesia for Procedures on the Spine and Spinal Cord
+00700-00797,Anesthesia for Procedures on the Upper Abdomen
+00800-00882,Anesthesia for Procedures on the Lower Abdomen
+00902-00952,Anesthesia for Procedures on the Perineum
+01112-01173,Anesthesia for Procedures on the Pelvis (Except Hip)
+01200-01274,Anesthesia for Procedures on the Upper Leg (Except Knee)
+01320-01444,Anesthesia for Procedures on the Knee and Popliteal Area
+01462-01522,Anesthesia for Procedures on the Lower Leg (Below Knee)
+01610-01680,Anesthesia for Procedures on the Shoulder and Axilla
+01710-01782,Anesthesia for Procedures on the Upper Arm and Elbow
+01810-01860,"Anesthesia for Procedures on the Forearm, Wrist, and Hand"
+01916-01936,Anesthesia for Radiological Procedures
+01951-01953,Anesthesia for Burn Excisions or Debridement Procedures
+01958-01969,Anesthesia for Obstetric Procedures
+01990-01999,Anesthesia for Other Procedures
+10004-10021,Fine Needle Aspiration Biopsy Procedures
+10030-19499,Surgical Procedures on the Integumentary System
+20100-29999,Surgical Procedures on the Musculoskeletal System
+30000-32999,Surgical Procedures on the Respiratory System
+33016-37799,Surgical Procedures on the Cardiovascular System
+38100-38999,Surgical Procedures on the Hemic and Lymphatic Systems
+39000-39599,Surgical Procedures on the Mediastinum and Diaphragm
+40490-49999,Surgical Procedures on the Digestive System
+50010-53899,Surgical Procedures on the Urinary System
+54000-55899,Surgical Procedures on the Male Genital System
+55920-55920,Reproductive System Procedures
+55970-55980,Intersex Surgery
+56405-58999,Surgical Procedures on the Female Genital System
+59000-59899,Surgical Procedures for Maternity Care and Delivery
+60000-60699,Surgical Procedures on the Endocrine System
+61000-64999,Surgical Procedures on the Nervous System
+65091-68899,Surgical Procedures on the Eye and Ocular Adnexa
+69000-69979,Surgical Procedures on the Auditory System
+69990-69990,Operating Microscope Procedures
+70010-76499,Diagnostic Radiology (Diagnostic Imaging) Procedures
+76506-76999,Diagnostic Ultrasound Procedures
+77001-77022,Radiologic Guidance
+77046-77067,"Breast, Mammography"
+77071-77086,Bone/Joint Studies
+77261-77799,Radiation Oncology Treatment
+78012-79999,Nuclear Medicine Procedures
+80047-80081,Organ or Disease Oriented Panels
+80102-80102,Drug confirmation
+80145-80377,Therapeutic Drug Assays
+80305-80377,Drug Assay Procedures
+80400-80439,Evocative/Suppression Testing Procedures
+80500-80502,Clinical Pathology Consultations
+81000-81099,Urinalysis Procedures
+81105-81408,Molecular Pathology Procedures
+81410-81479,Genomic Sequencing Procedures and Other Molecular Multianalyte Assays
+81490-81599,Multianalyte Assays with Algorithmic Analyses
+82009-84999,Chemistry Procedures
+85002-85999,Hematology and Coagulation Procedures
+86000-86849,Immunology Procedures
+86850-86999,Transfusion Medicine Procedures
+87003-87999,Microbiology Procedures
+88000-88099,Postmortem Examination Procedures
+88104-88199,Cytopathology Procedures
+88230-88299,Cytogenetic Studies
+88300-88399,Surgical Pathology Procedures
+88720-88749,"In Vivo (eg, Transcutaneous) Laboratory Procedures"
+89049-89240,Other Pathology and Laboratory Procedures
+89250-89398,Reproductive Medicine Procedures
+90281-90399,"Immune Globulins, Serum or Recombinant Products"
+90460-90474,Immunization Administration for Vaccines/Toxoids
+90476-90756,"Vaccines, Toxoids"
+90760-90761,IV infusions for hydration
+90765-90768,"IV infusions therapy, prophylaxis, or diagnosis"
+90772-90772,"Therapeutic, prophylactic or diagnostic injection (specify substance or drug); subcutaneous or intramuscular"
+90773-90773,intra-arterial
+90774-90774,"intravenous push, single or initial substance/drug"
+90775-90775,each additional sequential intravenous push of a new substance/drug (List separately in addition to code for primary procedure)
+90776-90776,additional sequential intravenous push of the same substance/drug provided in a facility
+90779-90779,"Unlisted therapeutic, prophylactic or diagnostic intravenous or intra-arterial injection or infusion"
+90785-90899,Psychiatry Services and Procedures
+90901-90913,Biofeedback Services and Procedures
+90935-90999,Dialysis Services and Procedures
+91010-91299,Gastroenterology Procedures
+92002-92499,Ophthalmology Services and Procedures
+92502-92700,Special Otorhinolaryngologic Services and Procedures
+92920-93799,Cardiovascular Procedures
+93880-93998,Non-Invasive Vascular Diagnostic Studies
+94002-94799,Pulmonary Procedures
+95004-95199,Allergy and Clinical Immunology Procedures
+95249-95251,Endocrinology Services
+95700-96020,Neurology and Neuromuscular Procedures
+96040-96040,Medical Genetics and Genetic Counseling Services
+96105-96146,"Central Nervous System Assessments/Tests (eg, Neuro-Cognitive, Mental Status, Speech Testing)"
+96150-96154,Health and behavior assessment
+96156-96171,Health and Behavior Assessment/Intervention Procedures
+96360-96549,"Hydration, Therapeutic, Prophylactic, Diagnostic Injections and Infusions, and Chemotherapy and Other Highly Complex Drug or Highly Complex Biologic Agent Administration"
+96567-96574,Photodynamic Therapy Procedures
+96900-96999,Special Dermatological Procedures
+97001-97002,Physical Therapy Evaluation
+97003-97004,Occupational therapy
+97010-97028,Supervised Physical Medicine and Rehabilitation Modalities
+97032-97039,Constant Attendance Physical Medicine and Rehabilitation Modalities
+97110-97150,Physical Medicine and Rehabilitation Therapeutic Procedures
+97151-97158,Adaptive Behavior Services
+97161-97799,Physical Medicine and Rehabilitation Evaluations
+97802-97804,Medical Nutrition Therapy Procedures
+97810-97814,Acupuncture Procedures
+98925-98929,Osteopathic Manipulative Treatment Procedures
+98940-98943,Chiropractic Manipulative Treatment Procedures
+98960-98962,Education and Training for Patient Self-Management
+98966-98972,Non-Face-to-Face Nonphysician Services
+99000-99091,"Special Services, Procedures and Reports"
+99100-99140,Qualifying Circumstances for Anesthesia
+99151-99157,Moderate (Conscious) Sedation
+99170-99199,Other Medicine Services and Procedures
+99500-99602,Home Health Procedures and Services
+99605-99607,Medication Therapy Management Services
+99201-99215,Office or Other Outpatient Services
+99217-99226,Hospital Observation Services
+99221-99239,Hospital Inpatient Services
+99241-99255,Consultation Services
+99281-99288,Emergency Department Services
+99291-99292,Critical Care Services
+99304-99318,Nursing Facility Services
+99324-99337,"Domiciliary, Rest Home (eg, Boarding Home), or Custodial Care Services"
+99339-99340,"Domiciliary, Rest Home (eg, Assisted Living Facility), or Home Care Plan Oversight Services"
+99341-99350,Home Services
+99354-99416,Prolonged Services
+99366-99368,Case Management Services
+99374-99380,Care Plan Oversight Services
+99381-99429,Preventive Medicine Services
+99441-99458,Non-Face-to-Face Services
+99450-99458,Special Evaluation and Management Services
+99460-99463,Newborn Care Services
+99464-99465,Delivery/Birthing Room Attendance and Resuscitation Services
+99466-99486,Inpatient Neonatal Intensive Care Services and Pediatric and Neonatal Critical Care Services
+99483-99486,Cognitive Assessment and Care Plan Services
+99484-99484,General Behavioral Health Integration Care Management
+99487-99491,Care Management Evaluation and Management Services
+99492-99494,Psychiatric Collaborative Care Management Services
+99495-99496,Transitional Care Evaluation and Management Services
+99497-99498,Advance Care Planning Evaluation and Management Services
+99499-99499,Other Evaluation and Management Services
+0001F-0015F,Composite Measures
+0500F-0584F,Patient Management
+1000F-1505F,Patient History
+2000F-2060F,Physical Examination
+3006F-3776F,Diagnostic/Screening Processes or Results
+4000F-4563F,"Therapeutic, Preventive or Other Interventions"
+5005F-5250F,Follow-up or Other Outcomes
+6005F-6150F,Patient Safety
+7010F-7025F,Structural Measures
+9001F-9007F,Non-Measure Claims Based Reporting
+0002M-0016M,Multianalyte Assay
+0042T-0184T,Various Services - Category III Codes
+0191T-0232T,Remote Real-Time Interactive Video-conferenced Critical Care Services and Other Undefined Category Codes
+0234T-0317T,Atherectomy (Open or Percutaneous) for Supra-Inguinal Arteries and Other Undefined Category Codes
+0329T-0358T,"Imaging, Testing, Implantation and Other Services"
+0362T-0373T,Adaptive Behavior Assessments
+0376T-0386T,Other Procedures and Assessments
+0394T-0423T,Pacemaker – Leadless and Pocketless System
+0424T-0468T,Phrenic Nerve Stimulation System Procedures
+0469T-0478T,"Imaging, evaluation, programming and recording procedures"
+0479T-0480T,Laser ablation procedures
+0609T-0612T,Magnetic Resonance Spectroscopy Imaging
+0613T-0614T,Cardiac Implantation and Replacement Procedures
+0615T-0618T,Procedures performed on Eyes
+0619T-0619T,Procedures performed on Prostate
+0604T-0606T,0607T-0608T
+0609T-0612T,Magnetic Resonance Spectroscopy Imaging
+0613T-0614T,Cardiac Implantation and Replacement Procedures
+0615T-0618T,Procedures performed on Eyes
+0619T-0619T,Procedures performed on Prostate
+0001U-0226U,Laboratory Analyses

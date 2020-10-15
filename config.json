@@ -1,0 +1,28 @@
+[
+    {
+        "threshold_nan": 0.4
+    },
+    {
+        "database_path": "..\\database\\cms_data.db",
+        "prvdr_category_file": "../provider_category.csv",
+        "icd9_procedure_code_category_file": "../ICD 9 Procedural Code Mapping.csv",
+        "hcpcs_code_category_file": "../hcpcs-code-categories.csv",
+        "eda_report_location": "..\\output\\eda_report",
+        "model_repository_location": "..\\models"
+    },
+    {
+        "ICD9_DIAGNOSIS_CODE_CATEGORY_URL": "https://icd.codes/icd9cm",
+        "HCPCS_CATEGORY_URL": "https://www.hcpcsdata.com/Codes"
+    },
+    {
+        "HIGH_CARDINALITY_THRESHOLD": 4,
+        "INFREQUENT_CATEGORY_CUT_OFF": 200,
+        "DEFAULT_INFREQUENT_CATEGORY_CUT_OFF": 10,
+        "INFREQUENT_CATEGORY_LABEL": "Infrequent",
+        "DEFAULT_INFREQUENT_CATEGORY_LABEL": "OTHERS",
+        "RANDOM_STATE": 420,
+        "STATISTICAL_TEST_ALPHA": 0.05,
+        "TEST_SIZE_FOR_SPLIT": 0.2,
+        "MISSING_VALUE_LABEL": "Missing"
+    }
+]
