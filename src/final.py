@@ -1,30 +1,96 @@
 #%%
+# To print output of all the lines
 from IPython.core.interactiveshell import InteractiveShell
 
 InteractiveShell.ast_node_interactivity = "all"
 
-# %%
-import pandas as pd
-import numpy as np
-
 #%%
 import json
+import os
+from tempfile import mkdtemp
+
+
+cd_path = os.path.dirname(os.path.realpath(__file__))
+os.chdir(cd_path)
+#%%
+# Computation packages
+import numpy as np
+import pandas as pd
+
+#%%
+# Imbalanced class handling packages
+from imblearn import pipeline as imb_pipeline
+from imblearn.over_sampling import SMOTE, RandomOverSampler
 
 #%%
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
-from imblearn import pipeline as imb_pipeline
 
 # %%
 # Custom packages
 from utils import (
-    ExtractData,
-    feature_importance,
-    StatisticalTest,
     CategorizeCardinalData,
-    CustomPipeline,
+    ExtractData,
+    StatisticalTest,
+    feature_importance,
 )
-from src import dispatcher
+from utils.CustomPipeline import (
+    CardinalityReducer,
+    get_ct_feature_names,
+    SelectColumnsTransfomer,
+)
+
+#%%
+# Plotting packages
+import seaborn as sns
+from matplotlib import pyplot as plt
+
+#%%
+from joblib import Memory, dump, load
+
+#%%
+# Pipelines & transformers
+from sklearn.compose import ColumnTransformer, make_column_selector
+from sklearn.pipeline import Pipeline
+
+#%%
+# module for dimensionality reduction
+from sklearn.decomposition import PCA, IncrementalPCA
+
+#%%
+# Preprocessing modules
+from sklearn.feature_selection import RFE
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import (
+    MinMaxScaler,
+    OneHotEncoder,
+    OrdinalEncoder,
+    StandardScaler,
+)
+
+#%%
+# sklearn models
+from sklearn.linear_model import LogisticRegression
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.ensemble import (
+    BaggingClassifier,
+    ExtraTreesClassifier,
+    RandomForestClassifier,
+    VotingClassifier,
+)
+from sklearn.tree import DecisionTreeClassifier
+
+# %%
+# Model metric methods
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
 
 #%%
 # loading configuration values
@@ -32,12 +98,19 @@ with open("../config.json", "r") as f:
     config = json.load(f)
 
 #%%
+# configuration constant variables
+INFREQUENT_CATEGORY_CUT_OFF = config[3]["INFREQUENT_CATEGORY_CUT_OFF"]
+INFREQUENT_CATEGORY_LABEL = config[3]["INFREQUENT_CATEGORY_LABEL"]
+RANDOM_STATE = config[3]["RANDOM_STATE"]
+MISSING_VALUE_LABEL = config[3]["MISSING_VALUE_LABEL"]
+EDA_REPORT_LOCATION = config[1]["eda_report_location"]
+MODEL_REPOSITORY_LOCATION = config[1]["model_repository_location"]
 NON_NAN_THRESHOLD = config[0]["threshold_nan"]
 TEST_SIZE_FOR_SPLIT = config[3]["TEST_SIZE_FOR_SPLIT"]
 RANDOM_STATE = config[3]["RANDOM_STATE"]
 
 # %%
-data = ExtractData.FetchSubset(no_of_subset=1)
+data = ExtractData.FetchSubset(no_of_subset=5)
 
 # %%
 data_inpatient_claims = data.fetchFromInpatientDataset()
@@ -117,7 +190,7 @@ diagnosis_code_cat = [
 
 selected_icd_code = "390-459"
 selected_data = data_inpatient_claims.loc[
-    data_inpatient_claims[diagnosis_code_cat].isin([selected_icd_code]).any(axis=1), :
+    data_inpatient_claims[diagnosis_code_cat].isin([selected_icd_code]).any(axis=1), :,
 ].copy()
 
 #%%
@@ -361,11 +434,12 @@ ct = StatisticalTest.ChiSquare(pd.concat([X_train, y_train], axis=1))
 # # X_test.drop(columns=["BENE_STATE_COUNTY_CODE"], axis=1, inplace=True)
 
 # %%
-# # Very high correlation between ('BENRES_OP', 'MEDREIMB_OP') & ('BENRES_CAR', 'MEDREIMB_CAR') hence dropping one column in the pair
+# # Very high correlation between ('BENRES_OP', 'MEDREIMB_OP') & ('BENRES_CAR', 'MEDREIMB_CAR') hence adding one of them to correlated list for dropping one column in the pair
 
-# X_train.drop(columns=["MEDREIMB_OP", "MEDREIMB_CAR"], inplace=True)
-# X_test.drop(columns=["MEDREIMB_OP", "MEDREIMB_CAR"], inplace=True)
-correlated_cols_drop_list = ["MEDREIMB_OP", "MEDREIMB_CAR"]
+correlated_cols_drop_list = [
+    "MEDREIMB_OP",
+    "MEDREIMB_CAR",
+]
 
 # %%
 X_train.columns
@@ -377,41 +451,433 @@ for c in categorical_features:
     ct.TestIndependence(c, "Readmission_within_30days_INP")
 
 # %%
-categorical_features = list(X_train.select_dtypes(include="category").columns)
-numerical_feature = list(X_train.select_dtypes(include="number").columns)
+#%%
+# Initializing all the objects for preprocessing
+std_scalar = StandardScaler()
+min_max_scalar = MinMaxScaler()
+onehot_encoder = OneHotEncoder(drop="first", sparse=False)
+median_imputer = SimpleImputer(strategy="median", missing_values=np.nan)
+constant_imputer = SimpleImputer(
+    strategy="constant", fill_value=MISSING_VALUE_LABEL, missing_values=np.nan
+)
+ordinal_encoder = OrdinalEncoder()
+
 
 # %%
+# Temp files for caching Pipelines
+numerical_cachedir = mkdtemp(prefix="num")
+numerical_memory = Memory(location=numerical_cachedir, verbose=10)
+
+categorical_cachedir = mkdtemp(prefix="cat")
+categorical_memory = Memory(location=categorical_cachedir, verbose=10)
+
+pipeline_cachedir = mkdtemp(prefix="cat")
+pipeline_memory = Memory(location=pipeline_cachedir, verbose=10)
+
+
+# %%
+
+# Pipeline to automate the numerical column processing
+numerical_transformer = Pipeline(
+    steps=[("imputer_with_medium", median_imputer), ("scaler", std_scalar)],
+    verbose=True,
+    memory=numerical_memory,
+)
+
+
+# %%
+
+# Pipeline to automate the categorical column processing with onehot encoder
+categorical_transformer = Pipeline(
+    steps=[
+        ("imputer_with_constant", constant_imputer),
+        (
+            "infrequent_category_remover",
+            CardinalityReducer(
+                cutt_off=INFREQUENT_CATEGORY_CUT_OFF, label=INFREQUENT_CATEGORY_LABEL
+            ),
+        ),
+        ("onehot", onehot_encoder),
+    ],
+    verbose=True,
+    memory=categorical_memory,
+)
+
+
+# %%
+
+# Pipeline to automate the categorical column processing with ordinal
+ord_categorical_transformer = Pipeline(
+    steps=[
+        ("imputer_with_constant", constant_imputer),
+        (
+            "infrequent_category_remover",
+            CardinalityReducer(
+                cutt_off=INFREQUENT_CATEGORY_CUT_OFF, label=INFREQUENT_CATEGORY_LABEL
+            ),
+        ),
+        ("ordinal", ordinal_encoder),
+    ],
+    verbose=True,
+    memory=categorical_memory,
+)
+
+# %%
+# Model initialization
+lr = LogisticRegression(random_state=RANDOM_STATE)
+lda = LinearDiscriminantAnalysis()
+dt = DecisionTreeClassifier(random_state=RANDOM_STATE, class_weight="balanced")
+rfc = RandomForestClassifier(class_weight="balanced", random_state=RANDOM_STATE)
+
+# %%
+# Oversampler initialization
+smt = SMOTE(random_state=RANDOM_STATE, n_jobs=-1)
+random_oversampling = RandomOverSampler(random_state=RANDOM_STATE)
+
+#%%
+# Feature selector initialization
+rfe_lr = RFE(estimator=lr, n_features_to_select=20, verbose=1, step=0.1)
+rfe_dt = RFE(estimator=dt, n_features_to_select=20, verbose=1, step=0.1)
+rfe_rfc = RFE(estimator=rfc, n_features_to_select=20, verbose=1, step=0.1)
+
+#%%
+
+
+def getMetricsData(y_true: np.array, y_pred: np.array):
+    """Method to print model metrics and plot confusion matrix
+
+    Args:
+        y_true (np.array): [actual labels]
+        y_pred (np.array): [predicted labels]
+    """
+    print(f"Accuracy score is {accuracy_score(y_true, y_pred)}")
+    print(f"Precision score is {precision_score(y_true, y_pred)}")
+    print(f"Recall score is {recall_score(y_true, y_pred)}")
+    print(f"F1 score is {f1_score(y_true, y_pred)}")
+    print(f"AUC ROC score is {roc_auc_score(y_true, y_pred)}")
+    print(f"Classification Report is \n {classification_report(y_true, y_pred)}")
+    sns.heatmap(confusion_matrix(y_true, y_pred), annot=True, cmap="Blues", fmt="d")
+    plt.show()
+
+
 def fit_predict(pipeline: Pipeline):
+    """Wrapper function to fit the pipeline to X_train & y_train and predict and provide metrics on y_test
+
+    Args:
+        pipeline (Pipeline): [Pipeline object to fit]
+    """
     model = pipeline.fit(X_train, y_train)
     y_pred = model.predict(X_test)
     print(f'{"="*40} {pipeline.steps[-1][-1]} {"="*50}')
     print(f'{"="*40} {"Training Metrics"} {"="*50}')
-    dispatcher.getMetricsData(y_train, model.predict(X_train))
+    getMetricsData(y_train, model.predict(X_train))
     print(f'{"="*40} {"Testing Metrics"} {"="*50}')
-    dispatcher.getMetricsData(y_test, y_pred)
+    getMetricsData(y_test, y_pred)
 
 
 #%%
-dispatcher.logreg_rfe_pipeline.steps.insert(
-    0,
-    (
-        "column selector",
-        CustomPipeline.SelectColumnsTransfomer(
-            columns=correlated_cols_drop_list, drop=True
+
+# Transformer to run both the numerical and one hot encoder pipeline on specified dtypes
+preprocessing_transformer = ColumnTransformer(
+    [
+        (
+            "categorical",
+            categorical_transformer,
+            make_column_selector(dtype_include="category"),
         ),
-    ),
+        (
+            "numerical",
+            numerical_transformer,
+            make_column_selector(dtype_include=np.number),
+        ),
+    ],
+    remainder="drop",
+    verbose=True,
+)
+
+# Transformer to run both the numerical and ordinal encoder pipeline on specified dtypes
+ord_preprocessing_transformer = ColumnTransformer(
+    [
+        (
+            "categorical",
+            ord_categorical_transformer,
+            make_column_selector(dtype_include="category"),
+        ),
+        (
+            "numerical",
+            numerical_transformer,
+            make_column_selector(dtype_include=np.number),
+        ),
+    ],
+    remainder="drop",
+    verbose=True,
+)
+# %%
+
+# Pipeline to automate drop of specified column and running the preprocessor for the remaining column
+preprocessing_pipeline = Pipeline(
+    [
+        (
+            "column selector",
+            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
+        ),
+        ("Preprocessing Step", preprocessing_transformer),
+    ],
+    verbose=True,
+    memory=pipeline_memory,
+)
+
+#%%
+imblanced_preprocessing_pipeline_smote = imb_pipeline.Pipeline(
+    [
+        (
+            "column selector",
+            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
+        ),
+        ("Preprocessing Step", preprocessing_transformer),
+        ("SMOTE oversampling", smt),
+    ],
+    verbose=True,
+    memory=pipeline_memory,
+)
+
+imblanced_preprocessing_pipeline_randover = imb_pipeline.Pipeline(
+    [
+        (
+            "column selector",
+            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
+        ),
+        ("Preprocessing Step", preprocessing_transformer),
+        ("Random oversampling", random_oversampling),
+    ],
+    verbose=True,
+    memory=pipeline_memory,
+)
+
+#%%
+X_train_transformed = preprocessing_pipeline.fit_transform(X_train)
+X_train_transformed = pd.DataFrame(
+    X_train_transformed, columns=get_ct_feature_names(preprocessing_transformer)
+)
+
+#%%
+X_test_transformed = preprocessing_pipeline.transform(X_test)
+X_test_transformed = pd.DataFrame(
+    X_test_transformed, columns=get_ct_feature_names(preprocessing_transformer)
 )
 #%%
-fit_predict(dispatcher.logreg_rfe_pipeline)
-#%%
-dispatcher.logreg_rfe_pipeline.predict(X_test)
+(
+    X_train_transformed_smote,
+    y_train_transformed_smote,
+) = imblanced_preprocessing_pipeline_smote.fit_resample(X_train, y_train)
 
 #%%
-dispatcher.logreg_rfe_smote_pipeline.fit(X_train, y_train)
+X_train_transformed_smote = pd.DataFrame(
+    X_train_transformed_smote, columns=get_ct_feature_names(preprocessing_transformer)
+)
+
 #%%
-dispatcher.dt_rfe_pipeline.fit(X_train, y_train)
-dispatcher.rfc_rfe_pipeline.fit(X_train, y_train)
-dispatcher.dt_rfe_smote_pipeline.fit(X_train, y_train)
-dispatcher.rfc_rfe_smote_pipeline.fit(X_train, y_train)
+(
+    X_train_transformed_randover,
+    y_train_transformed_randover,
+) = imblanced_preprocessing_pipeline_randover.fit_resample(X_train, y_train)
+
+#%%
+X_train_transformed_randover = pd.DataFrame(
+    X_train_transformed_randover,
+    columns=get_ct_feature_names(preprocessing_transformer),
+)
+
+# %%
+logreg_rfe_pipeline = Pipeline(
+    [
+        ("Preprocessing Step", preprocessing_pipeline),
+        ("Feature Selection", rfe_lr),
+        ("LogReg_Classifier", lr),
+    ],
+    verbose=True,
+    memory=pipeline_memory,
+)
+
+logreg_rfe_smote_pipeline = imb_pipeline.Pipeline(
+    [
+        (
+            "drop columns",
+            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
+        ),
+        ("Preprocessing Step", preprocessing_transformer),
+        ("SMOTE oversampling", smt),
+        ("Feature Selection", rfe_lr),
+        ("LogReg_Classifier", lr),
+    ],
+    verbose=True,
+    memory=pipeline_memory,
+)
+
+logreg_rfe_randover_pipeline = imb_pipeline.Pipeline(
+    [
+        (
+            "drop columns",
+            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
+        ),
+        ("Preprocessing Step", preprocessing_transformer),
+        ("Random oversampling", random_oversampling),
+        ("Feature Selection", rfe_lr),
+        ("LogReg_Classifier", lr),
+    ],
+    verbose=True,
+    memory=pipeline_memory,
+)
+#%%
+dt_rfe_pipeline = Pipeline(
+    [
+        ("Preprocessing Step", preprocessing_pipeline),
+        ("Feature Selection", rfe_dt),
+        ("LogReg_Classifier", dt),
+    ],
+    verbose=True,
+    memory=pipeline_memory,
+)
+
+dt_rfe_smote_pipeline = imb_pipeline.Pipeline(
+    [
+        (
+            "drop columns",
+            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
+        ),
+        ("Preprocessing Step", preprocessing_transformer),
+        ("SMOTE oversampling", smt),
+        ("Feature Selection", rfe_dt),
+        ("LogReg_Classifier", dt),
+    ],
+    verbose=True,
+    memory=pipeline_memory,
+)
+
+dt_rfe_randover_pipeline = imb_pipeline.Pipeline(
+    [
+        (
+            "drop columns",
+            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
+        ),
+        ("Preprocessing Step", preprocessing_transformer),
+        ("Random oversampling", random_oversampling),
+        ("Feature Selection", rfe_dt),
+        ("LogReg_Classifier", dt),
+    ],
+    verbose=True,
+    memory=pipeline_memory,
+)
+#%%
+rfc_rfe_pipeline = Pipeline(
+    [
+        ("Preprocessing Step", preprocessing_pipeline),
+        ("Feature Selection", rfe_rfc),
+        ("LogReg_Classifier", rfc),
+    ],
+    verbose=True,
+    memory=pipeline_memory,
+)
+
+rfc_rfe_smote_pipeline = imb_pipeline.Pipeline(
+    [
+        (
+            "drop columns",
+            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
+        ),
+        ("Preprocessing Step", preprocessing_transformer),
+        ("SMOTE oversampling", smt),
+        ("Feature Selection", rfe_rfc),
+        ("LogReg_Classifier", rfc),
+    ],
+    verbose=True,
+    memory=pipeline_memory,
+)
+
+rfc_rfe_randover_pipeline = imb_pipeline.Pipeline(
+    [
+        (
+            "drop columns",
+            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
+        ),
+        ("Preprocessing Step", preprocessing_transformer),
+        ("Random oversampling", random_oversampling),
+        ("Feature Selection", rfe_rfc),
+        ("LogReg_Classifier", rfc),
+    ],
+    verbose=True,
+    memory=pipeline_memory,
+)
+
+# %%
+dt_pipeline = Pipeline(
+    [("Preprocessing Step", preprocessing_pipeline), ("DT_Classifier", dt),],
+    verbose=True,
+    memory=pipeline_memory,
+)
+
+dt_smote_pipeline = imb_pipeline.Pipeline(
+    [
+        (
+            "drop columns",
+            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
+        ),
+        ("Preprocessing Step", preprocessing_transformer),
+        ("SMOTE Sampling", smt),
+        ("Classifier", DecisionTreeClassifier(random_state=RANDOM_STATE)),
+    ],
+    verbose=True,
+    memory=pipeline_memory,
+)
+
+dt_randover_pipeline = imb_pipeline.Pipeline(
+    [
+        (
+            "drop columns",
+            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
+        ),
+        ("Preprocessing Step", preprocessing_transformer),
+        ("Random OverSampling", random_oversampling),
+        ("Classifier", DecisionTreeClassifier(random_state=RANDOM_STATE)),
+    ],
+    verbose=True,
+    memory=pipeline_memory,
+)
+
+#%%
+fit_predict(logreg_rfe_smote_pipeline)
+
+#%%
+fit_predict(logreg_rfe_pipeline)
+#%%
+fit_predict(logreg_rfe_randover_pipeline)
+
+#%%
+fit_predict(dt_rfe_smote_pipeline)
+
+#%%
+fit_predict(dt_rfe_pipeline)
+#%%
+fit_predict(dt_rfe_randover_pipeline)
+
+#%%
+fit_predict(rfc_rfe_smote_pipeline)
+
+#%%
+fit_predict(rfc_rfe_pipeline)
+#%%
+fit_predict(rfc_rfe_randover_pipeline)
+
+#%%
+dump(
+    rfc_rfe_randover_pipeline,
+    f"{MODEL_REPOSITORY_LOCATION}\\rfc_rfe_randover_pipeline.pkl",
+)
+# %%
+dump(
+    X_train.columns.tolist(),
+    f"{MODEL_REPOSITORY_LOCATION}\\rfc_rfe_randover_pipeline_cols.pkl",
+)
+
 
 # %%

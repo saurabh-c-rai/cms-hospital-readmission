@@ -4,16 +4,17 @@ import pandas as pd
 import numpy as np
 
 #%%
+import os
+
+cd_path = os.path.dirname(os.path.realpath(__file__))
+os.chdir(cd_path)
+
+#%%
 import json
 
 import requests
 from ExtractData import FetchSubset
 
-#%%
-import os
-
-cd_path = os.path.dirname(os.path.realpath(__file__))
-os.chdir(cd_path)
 #%%
 with open("../config.json", "r") as f:
     config = json.load(f)
