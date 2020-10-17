@@ -1,4 +1,5 @@
 #%%
+from typing import List
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -32,6 +33,8 @@ class CardinalityReducer(BaseEstimator, TransformerMixin):
         cutt_off=DEFAULT_INFREQUENT_CATEGORY_CUT_OFF,
         label=DEFAULT_INFREQUENT_CATEGORY_LABEL,
     ):
+        print(f"{__class__} Initialized")
+
         self.cutt_off = cutt_off
         self.label = label
 
@@ -66,6 +69,8 @@ class CardinalityReducer(BaseEstimator, TransformerMixin):
         Returns:
             [DataFrame]: [DataFrame with all the low frequency categories merged into one category]
         """
+        print(f"{__class__} Transform method called")
+
         data = pd.DataFrame(X).astype("category")
         for col in data:
             isHighCardinal = data[col].nunique() > HIGH_CARDINALITY_THRESHOLD
@@ -93,21 +98,23 @@ def get_feature_out(estimator, feature_in):
 class SelectColumnsTransfomer(BaseEstimator, TransformerMixin):
     """ A DataFrame transformer that provides column selection
     
-    Allows to select columns by name from pandas dataframes in scikit-learn
+    Allows to select or drop columns by name from pandas dataframes in scikit-learn
     pipelines.
     
     Parameters
     ----------
-    columns : list of str, names of the dataframe columns to select
-        Default: [] 
-    
+    columns (List) : list of str, names of the dataframe columns to select
+    drop (bool, optional): [description]. Defaults to False.
+
     """
 
-    def __init__(self, columns=[]):
+    def __init__(self, columns: List, drop: bool = False):
+        print(f"{__class__} Initialized")
         self.columns = columns
+        self.drop = drop
 
-    def transform(self, X, **transform_params):
-        """ Selects columns of a DataFrame
+    def transform(self, X: pd.DataFrame, **transform_params):
+        """ Selects or drop columns of a DataFrame.
         
         Parameters
         ----------
@@ -119,7 +126,14 @@ class SelectColumnsTransfomer(BaseEstimator, TransformerMixin):
         trans : pandas DataFrame
             contains selected columns of X      
         """
-        trans = X[self.columns].copy()
+        print(f"{__class__} Transform method called")
+        if self.columns:
+            if self.drop:
+                trans = X.drop(columns=self.columns)
+            else:
+                trans = X[self.columns].copy()
+        else:
+            return X
         return trans
 
     def fit(self, X, y=None, **fit_params):
