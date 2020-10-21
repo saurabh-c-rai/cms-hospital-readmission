@@ -8,6 +8,9 @@ InteractiveShell.ast_node_interactivity = "all"
 
 import json
 
+#%%
+from utils.ExtractData import FetchSubset
+
 # %%
 import sqlite3
 
@@ -53,7 +56,7 @@ MODEL_REPOSITORY_LOCATION = config[1]["model_repository_location"]
 # %%
 from imblearn import pipeline as imb_pipeline
 from imblearn.over_sampling import SMOTE, RandomOverSampler
-from sklearn.compose import ColumnTransformer, make_column_transformer
+from sklearn.compose import ColumnTransformer
 
 # %%
 from sklearn.decomposition import PCA, IncrementalPCA
@@ -64,6 +67,7 @@ from sklearn.ensemble import (
     RandomForestClassifier,
     VotingClassifier,
 )
+from sklearn.feature_selection import RFE
 from sklearn.impute import SimpleImputer
 
 # %%
@@ -281,28 +285,28 @@ df.dtypes
 # Check - 1 dropping columns as per feature importance
 # df.drop(columns="BENRES_IP", inplace=True, axis=1)
 # %%
-from pandas_profiling import ProfileReport
+# from pandas_profiling import ProfileReport
 
-eda_report = ProfileReport(
-    df,
-    title="Exploratory Data Analysis",
-    minimal=True,
-    interactions={"continuous": False},
-    missing_diagrams={
-        "bar": True,
-        "matrix": True,
-        "heatmap": True,
-        "dendrogram": True,
-    },
-    correlations={
-        "pearson": {"calculate": True},
-        "spearman": {"calculate": True},
-        "kendall": {"calculate": True},
-        "phi_k": {"calculate": True},
-        "cramers": {"calculate": True},
-    },
-)
-eda_report.to_file(f"{EDA_REPORT_LOCATION}\\final_df_eda_report.html")
+# eda_report = ProfileReport(
+#     df,
+#     title="Exploratory Data Analysis",
+#     minimal=True,
+#     interactions={"continuous": False},
+#     missing_diagrams={
+#         "bar": True,
+#         "matrix": True,
+#         "heatmap": True,
+#         "dendrogram": True,
+#     },
+#     correlations={
+#         "pearson": {"calculate": True},
+#         "spearman": {"calculate": True},
+#         "kendall": {"calculate": True},
+#         "phi_k": {"calculate": True},
+#         "cramers": {"calculate": True},
+#     },
+# )
+# eda_report.to_file(f"{EDA_REPORT_LOCATION}\\final_df_eda_report.html")
 
 
 # %%
@@ -326,34 +330,34 @@ ct = ChiSquare(pd.concat([X_train, y_train], axis=1))
 
 
 # %%
-cramers = pd.DataFrame(
-    {
-        i: [ct.cramers_v(i, j) for j in categorical_features]
-        for i in categorical_features
-    }
-)
-cramers["column"] = [i for i in categorical_features if i not in ["memberid"]]
-cramers.set_index("column", inplace=True)
+# cramers = pd.DataFrame(
+#     {
+#         i: [ct.cramers_v(i, j) for j in categorical_features]
+#         for i in categorical_features
+#     }
+# )
+# cramers["column"] = [i for i in categorical_features if i not in ["memberid"]]
+# cramers.set_index("column", inplace=True)
 
 
-# %%
-# categorical correlation heatmap
-plt.figure(figsize=(25, 25))
-sns.heatmap(cramers, annot=True, fmt=".2f", cmap="magma")
-plt.show()
+# # %%
+# # categorical correlation heatmap
+# plt.figure(figsize=(25, 25))
+# sns.heatmap(cramers, annot=True, fmt=".2f", cmap="magma")
+# plt.show()
 
-# > High correlation between BENE_STATE_COUNTY_CODE & PRVDR_NUM_CAT_INP columns
+# # > High correlation between BENE_STATE_COUNTY_CODE & PRVDR_NUM_CAT_INP columns
 
-# %%
-# X_train.drop(columns=["BENE_STATE_COUNTY_CODE"], axis=1, inplace=True)
-# X_test.drop(columns=["BENE_STATE_COUNTY_CODE"], axis=1, inplace=True)
+# # %%
+# # X_train.drop(columns=["BENE_STATE_COUNTY_CODE"], axis=1, inplace=True)
+# # X_test.drop(columns=["BENE_STATE_COUNTY_CODE"], axis=1, inplace=True)
 
 
-# %%
-plt.figure(figsize=(25, 25))
-sns.heatmap(
-    X_train.select_dtypes(include="number").corr(), annot=True, fmt=".2f", cmap="magma"
-)
+# # %%
+# plt.figure(figsize=(25, 25))
+# sns.heatmap(
+#     X_train.select_dtypes(include="number").corr(), annot=True, fmt=".2f", cmap="magma"
+# )
 # plt.show()
 # #%%
 # distribution_age = pd.crosstab(
@@ -433,12 +437,12 @@ numerical_transformer = Pipeline(
 categorical_transformer = Pipeline(
     steps=[
         ("imputer_with_constant", constant_imputer),
-        (
-            "infrequent_category_remover",
-            CardinalityReducer(
-                cutt_off=INFREQUENT_CATEGORY_CUT_OFF, label=INFREQUENT_CATEGORY_LABEL
-            ),
-        ),
+        # (
+        #     "infrequent_category_remover",
+        #     CardinalityReducer(
+        #         cutt_off=INFREQUENT_CATEGORY_CUT_OFF, label=INFREQUENT_CATEGORY_LABEL
+        #     ),
+        # ),
         ("onehot", onehot_encoder),
     ],
     verbose=True,
@@ -466,7 +470,7 @@ ord_categorical_transformer = Pipeline(
 # %%
 preprocessing_pipeline = ColumnTransformer(
     [
-        ("categorical", ord_categorical_transformer, categorical_features),
+        ("categorical", categorical_transformer, categorical_features),
         ("numerical", numerical_transformer, numerical_feature),
     ],
     remainder="drop",
@@ -497,13 +501,43 @@ y_train = y_train.reset_index().drop(columns="index", axis=1).values.ravel()
 y_test = y_test.reset_index().drop(columns="index", axis=1).values.ravel()
 
 # %%
+# Model initialization
 lr = LogisticRegression(random_state=RANDOM_STATE)
 lda = LinearDiscriminantAnalysis()
 knn = KNeighborsClassifier()
 dt = DecisionTreeClassifier(random_state=RANDOM_STATE, class_weight="balanced")
 gnb = GaussianNB()
 rfc = RandomForestClassifier(class_weight="balanced", random_state=RANDOM_STATE)
+#%%
+# %%
+# Oversampler initialization
+smt = SMOTE(random_state=RANDOM_STATE, n_jobs=-1)
+random_oversampling = RandomOverSampler(random_state=RANDOM_STATE)
 
+#%%
+# Feature selector initialization
+rfe_lr = RFE(estimator=lr, n_features_to_select=20)
+rfe_dt = RFE(estimator=dt, n_features_to_select=20)
+
+#%%
+logreg_rfe_pipeline = Pipeline(
+    [
+        # ("Select Relevent Columns", SelectColumnsTransfomer(columns=numerical_feature + ct.dfReleventCols)),
+        ("Preprocessing Step", preprocessing_pipeline),
+        ("Feature Selection", rfe_lr),
+        ("LogReg_Classifier", lr),
+    ]
+)
+
+logreg_rfe_smote_pipeline = Pipeline(
+    [
+        # ("Select Relevent Columns", SelectColumnsTransfomer(columns=numerical_feature + ct.dfReleventCols)),
+        ("Preprocessing Step", preprocessing_pipeline),
+        ("SMOTE oversampling", smt),
+        ("Feature Selection", rfe_lr),
+        ("LogReg_Classifier", lr),
+    ]
+)
 
 # %%
 num_folds = 5
@@ -515,11 +549,6 @@ models.append(("LDA", lda))
 models.append(("KNN", knn))
 models.append(("CART", dt))
 models.append(("NB", gnb))
-
-
-# %%
-smt = SMOTE(random_state=RANDOM_STATE, n_jobs=-1)
-random_oversampling = RandomOverSampler(random_state=RANDOM_STATE)
 
 
 # %%
@@ -607,27 +636,27 @@ feature_importance.plot(top_n_features=50, width=1000)
 pca = PCA(n_components=0.95)
 ipca = IncrementalPCA(n_components=0.95)
 
-
-# %%
-parameter_grid = {
-    "DT_Classifier__max_depth": np.linspace(1, 32, 32, endpoint=True),
-    "DT_Classifier__min_samples_leaf": np.linspace(0.1, 0.5, 5, endpoint=True),
-    "DT_Classifier__min_samples_split": np.linspace(0.1, 1.0, 10, endpoint=True),
-    "DT_Classifier__max_features": ["auto", "log2", None],
-}
-
-
-# %%
-rand_grid_search = RandomizedSearchCV(
-    estimator=dt_pipeline,
-    param_distributions=parameter_grid,
-    n_iter=15,
-    scoring="f1",
-    verbose=4,
-)
-
 #%%
-rand_grid_search.fit(X_train, y_train)
+# # %%
+# parameter_grid = {
+#     "DT_Classifier__max_depth": np.linspace(1, 32, 32, endpoint=True),
+#     "DT_Classifier__min_samples_leaf": np.linspace(0.1, 0.5, 5, endpoint=True),
+#     "DT_Classifier__min_samples_split": np.linspace(0.1, 1.0, 10, endpoint=True),
+#     "DT_Classifier__max_features": ["auto", "log2", None],
+# }
+
+
+# # %%
+# rand_grid_search = RandomizedSearchCV(
+#     estimator=dt_pipeline,
+#     param_distributions=parameter_grid,
+#     n_iter=15,
+#     scoring="f1",
+#     verbose=4,
+# )
+
+# #%%
+# rand_grid_search.fit(X_train, y_train)
 # %%
 num_folds = 5
 seed = 7
@@ -655,33 +684,6 @@ models.append(("NB", gnb))
 #     print(msg)
 
 # # Ensembling Classifiers
-
-# %%
-from hpsklearn import (
-    HyperoptEstimator,
-    extra_trees,
-    random_forest,
-)
-from hyperopt import tpe
-
-# %%
-estim_extratrees = HyperoptEstimator(
-    classifier=extra_trees("extratrees_clf"),
-    preprocessing=[],
-    algo=tpe.suggest,
-    max_evals=10,
-    trial_timeout=600,
-)
-
-estim_extratrees.fit(X_train_transformed.to_numpy(), y_train)
-
-estim_extratrees.score(X_test_transformed.to_numpy(), y_test)
-
-estim_extratrees.best_model()["learner"]
-
-#%%
-extratrees_clf = estim_extratrees.best_model()["learner"]
-
 
 # %%
 extratrees_clf = ExtraTreesClassifier(
@@ -720,26 +722,15 @@ extratrees_randover_pipeline = imb_pipeline.Pipeline(
 
 # %%
 fit_predict(extratrees_clf_pipeline)
+
+#%%
 fit_predict(extratrees_smt_pipeline)
+
+#%%
 fit_predict(extratrees_randover_pipeline)
 
 
 # %%
-estim_rfc = HyperoptEstimator(
-    classifier=random_forest("rfc_clf"),
-    preprocessing=[],
-    algo=tpe.suggest,
-    max_evals=10,
-    trial_timeout=600,
-)
-
-estim_rfc.fit(X_train_transformed.to_numpy(), y_train)
-
-estim_rfc.score(X_test_transformed.to_numpy(), y_test)
-
-estim_rfc.best_model()["learner"]
-
-rfc_model_1 = estim_rfc.best_model()["learner"]
 
 
 # %%
@@ -780,7 +771,11 @@ rfc_randover_pipeline = imb_pipeline.Pipeline(
 
 # %%
 fit_predict(rfc_clf_pipeline)
+
+#%%
 fit_predict(rfc_smt_pipeline)
+
+#%%
 fit_predict(rfc_randover_pipeline)
 
 
@@ -796,7 +791,10 @@ estimators = [
     ("extratrees_pipeline", extratrees_clf_pipeline),
 ]
 
-
+estimators_smote = [
+    ("rfc_smote_pipeline", rfc_smt_pipeline),
+    ("extratrees_smote_pipeline", extratrees_smt_pipeline),
+]
 # %%
 voting_clf = VotingClassifier(
     estimators=estimators, voting="soft", verbose=True, n_jobs=-1
@@ -879,27 +877,40 @@ getMetricsData(y_test, y_pred)
 # %%
 conn_object.close()
 
+# %%
+from hpsklearn import HyperoptEstimator, extra_trees, random_forest
+from hyperopt import tpe
 
 # %%
-from xgboost import XGBClassifier
-
-# %%
-xgboost = XGBClassifier(
-    learning_rate=0.01,
-    max_delta_step=1,
-    max_depth=10,
-    n_estimators=500,
-    n_jobs=-1,
-    num_parallel_tree=10,
-    random_state=RANDOM_STATE,
-    reg_alpha=0.01,
-    reg_lambda=0.01,
-    scale_pos_weight=0.5,
-    verbosity=1,
+estim_extratrees = HyperoptEstimator(
+    classifier=extra_trees("extratrees_clf"),
+    preprocessing=[],
+    algo=tpe.suggest,
+    max_evals=10,
+    trial_timeout=600,
 )
 
+estim_extratrees.fit(X_train_transformed.to_numpy(), y_train)
 
+estim_extratrees.score(X_test_transformed.to_numpy(), y_test)
+
+estim_extratrees.best_model()["learner"]
+
+#%%
+extratrees_hp_model = estim_extratrees.best_model()["learner"]
 # %%
+estim_rfc = HyperoptEstimator(
+    classifier=random_forest("rfc_clf"),
+    preprocessing=[],
+    algo=tpe.suggest,
+    max_evals=10,
+    trial_timeout=600,
+)
 
-# %%
+estim_rfc.fit(X_train_transformed.to_numpy(), y_train)
 
+estim_rfc.score(X_test_transformed.to_numpy(), y_test)
+
+estim_rfc.best_model()["learner"]
+
+rfc_hp_model = estim_rfc.best_model()["learner"]

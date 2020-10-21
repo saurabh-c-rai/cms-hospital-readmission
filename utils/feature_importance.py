@@ -79,7 +79,11 @@ class FeatureImportance:
         if verbose:
             print("""\n\n---------\nRunning get_feature_names\n---------\n""")
 
-        column_transformer = self.pipeline[0]
+        column_transformer = (
+            self.pipeline[1]
+            if isinstance(self.pipeline[1], ColumnTransformer)
+            else self.pipeline[0].steps[1][1]
+        )
         assert isinstance(
             column_transformer, ColumnTransformer
         ), "Input isn't a ColumnTransformer"
@@ -257,11 +261,13 @@ class FeatureImportance:
 
         features = self.get_selected_features()
 
-        assert hasattr(
-            self.pipeline[-1], "feature_importances_"
-        ), "The last element in the pipeline isn't an estimator with a feature_importances_ attribute"
-
-        importance_values = self.pipeline[-1].feature_importances_
+        assert hasattr(self.pipeline[-1], "feature_importances_") or hasattr(
+            self.pipeline[-1], "coef_"
+        ), "The last element in the pipeline isn't an estimator with a feature_importances_ or coeff_ attribute"
+        if hasattr(self.pipeline[-1], "feature_importances_"):
+            importance_values = self.pipeline[-1].feature_importances_
+        else:
+            importance_values = self.pipeline[-1].coef_.flatten()
 
         assert len(features) == len(
             importance_values

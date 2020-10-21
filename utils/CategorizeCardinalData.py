@@ -4,16 +4,10 @@ import pandas as pd
 import numpy as np
 
 #%%
-import os
-
-cd_path = os.path.dirname(os.path.realpath(__file__))
-os.chdir(cd_path)
-
-#%%
 import json
 
 import requests
-from ExtractData import FetchSubset
+from utils.ExtractData import FetchSubset
 
 #%%
 with open("../config.json", "r") as f:
@@ -244,16 +238,10 @@ class HCPCSCodeCategoryCreator(object):
         "78007": "78014",
         "78010": "78013",
         "78011": "78013",
-        "80100": "G0431",
-        "80101": "G0431",
         "80104": "G0434",
         "78000": "78012",
         "78001": "78012",
         "78003": "78012",
-        "78010": "78013",
-        "78011": "78013",
-        "78006": "78014",
-        "78007": "78014",
         "10022": "10004",
         "96101": "96130",
         "96102": "96138",
@@ -267,8 +255,6 @@ class HCPCSCodeCategoryCreator(object):
         "93875": "93880",
         "90921": "G0308",
         "99143": "99151",
-        "99143": "99151",
-        "99144": "99152",
         "99145": "99153",
         "99148": "99155",
         "99149": "99156",
@@ -290,7 +276,6 @@ class HCPCSCodeCategoryCreator(object):
         hcpcs_code_category = pd.read_csv(
             config[1]["hcpcs_code_category_file"], encoding="cp1252"
         )
-
         hcpcs_code_category_numeric = [
             x
             for x in hcpcs_code_category["Code Range"].str.split("-")
@@ -313,7 +298,9 @@ class HCPCSCodeCategoryCreator(object):
                 ],
                 axis=0,
             )
-
+        self.unique_hcpcs_code_df.replace(
+            self.__class__.OLD_HCPCS_CODE_MAPPING, inplace=True
+        )
         self.unique_hcpcs_code_category_df = pd.DataFrame(
             self.unique_hcpcs_code_df[0].unique(), columns=["HCPCS_code"]
         )
