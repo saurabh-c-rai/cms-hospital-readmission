@@ -23,6 +23,8 @@
         "RANDOM_STATE": 420,
         "STATISTICAL_TEST_ALPHA": 0.05,
         "TEST_SIZE_FOR_SPLIT": 0.2,
-        "MISSING_VALUE_LABEL": "Missing"
+        "MISSING_VALUE_LABEL": "Missing",
+        "N_JOB_PARAM_VALUE": -1,
+        "VERBOSE_PARAM_VALUE": 1
     }
 ]
