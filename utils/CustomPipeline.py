@@ -30,16 +30,25 @@ class CardinalityReducer(BaseEstimator, TransformerMixin):
     # Class Constructor
     def __init__(
         self,
-        cutt_off=DEFAULT_INFREQUENT_CATEGORY_CUT_OFF,
-        label=DEFAULT_INFREQUENT_CATEGORY_LABEL,
+        cutt_off: int = DEFAULT_INFREQUENT_CATEGORY_CUT_OFF,
+        label: str = DEFAULT_INFREQUENT_CATEGORY_LABEL,
     ):
         print(f"{__class__} Initialized")
 
         self.cutt_off = cutt_off
         self.label = label
+        self.column_category = dict()
 
     # Return self nothing else to do here
     def fit(self, X, y=None):
+        print(f"{__class__} fit method called")
+        data = pd.DataFrame(X).astype("category")
+        for col in data:
+            isHighCardinal = data[col].nunique() > HIGH_CARDINALITY_THRESHOLD
+            if isHighCardinal:
+                self.column_category[col] = self.getInfrequentCategories(data[col])
+
+        print(f"{__class__} Fit method executed")
         return self
 
     # Helper method to get categories which will be replaced with others
@@ -72,13 +81,12 @@ class CardinalityReducer(BaseEstimator, TransformerMixin):
         print(f"{__class__} Transform method called")
 
         data = pd.DataFrame(X).astype("category")
-        for col in data:
-            isHighCardinal = data[col].nunique() > HIGH_CARDINALITY_THRESHOLD
-            if isHighCardinal:
-                catergories_to_remove = self.getInfrequentCategories(data[col])
-                data[col] = data[col].cat.add_categories([self.label])
-                data[col] = data[col].replace(catergories_to_remove, self.label)
+        data.dtypes
+        for col, infrequent_category in self.column_category.items():
+            data[col] = data[col].cat.add_categories([self.label])
+            data[col] = data[col].replace(infrequent_category, self.label)
 
+        print(f"{__class__} Transform method executed")
         return data
 
 
@@ -136,7 +144,7 @@ class SelectColumnsTransfomer(BaseEstimator, TransformerMixin):
             return X
         return trans
 
-    def fit(self, X, y=None, **fit_params):
+    def fit(self, X: pd.DataFrame, y=None, **fit_params):
         """ Do nothing function
         
         Parameters
@@ -149,6 +157,10 @@ class SelectColumnsTransfomer(BaseEstimator, TransformerMixin):
         ----------
         self  
         """
+        if self.columns:
+            self.columns = [col for col in self.columns if col in X.columns]
+
+        print(f"Columns {self.columns} will be dropped")
         return self
 
 
