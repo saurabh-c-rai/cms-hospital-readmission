@@ -96,15 +96,15 @@ from sklearn.preprocessing import (
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 
-from CustomPipeline import (
+from utils.CustomPipeline import (
     CardinalityReducer,
     SelectColumnsTransfomer,
     get_ct_feature_names,
 )
-from feature_importance import FeatureImportance
+from utils.feature_importance import FeatureImportance
 
 # %%
-from StatisticalTest import ChiSquare
+from utils.StatisticalTest import ChiSquare
 
 # %%
 conn_object = sqlite3.connect("../database/cms_data.db")
