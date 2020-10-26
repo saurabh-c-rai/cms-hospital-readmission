@@ -8,16 +8,14 @@ from dash.dependencies import Input, Output
 import plotly.graph_objs as go
 import sqlite3
 import plotly.express as px
+from utils.CategorizeCardinalData import ProviderNumCategoryCreator
 
 #%%
 import json
 import os
 
 #%%
-cd_path = os.path.dirname(os.path.realpath(__file__))
-os.chdir(cd_path)
-#%%
-with open("../../config.json", "r") as f:
+with open("../config.json", "r") as f:
     config = json.load(f)
 
 #%%
@@ -35,10 +33,11 @@ N_JOB_PARAM_VALUE = config[3]["N_JOB_PARAM_VALUE"]
 VERBOSE_PARAM_VALUE = config[3]["VERBOSE_PARAM_VALUE"]
 DATABASE_PATH = config[1]["database_path"]
 #%%
-conn_object = sqlite3.connect(f"../{DATABASE_PATH}")
+conn_object = sqlite3.connect(f"{DATABASE_PATH}")
 #%%
 colors = {"background": "#F3F6FA", "background_div": "white", "text": "#7FDBFF"}
 #%%
+prvdr_num = ProviderNumCategoryCreator()
 inpatient_target = pd.read_sql("SELECT * FROM InPatient_Target", con=conn_object)
 #%%
 def gender_pie_chart():
@@ -87,8 +86,74 @@ def gender_race_plot():
         x="BENE_RACE_CD",
         y=0,
         color="BENE_SEX_IDENT_CD",
-        labels={"BENE_RACE_CD": "RACE", "0": "PATIENTS"},
+        labels={
+            "BENE_RACE_CD": "RACE",
+            "0": "PATIENTS",
+            "BENE_SEX_IDENT_CD": "PATIENT GENDER",
+        },
     )
+    return figure
+
+
+def race_age_plot():
+    """
+    docstring
+    """
+    labels = ["25-40", "40-55", "55-70", "70-85", "85-100"]
+    inpatient_target["Age_Category"] = pd.cut(
+        inpatient_target["Age"], bins=5, labels=labels
+    )
+    data = (
+        inpatient_target.groupby(["Age_Category", "BENE_RACE_CD"]).size().reset_index()
+    )
+    figure = px.bar(
+        data_frame=data,
+        x="Age_Category",
+        y=0,
+        color="BENE_RACE_CD",
+        labels={
+            "Age_Category": "Age Bins",
+            "0": "PATIENTS",
+            "BENE_RACE_CD": "PATIENT RACE",
+        },
+    )
+    figure.update_layout(
+        # barmode="group",
+        title={"text": "Distribution of Race vs Age", "y": 0.9, "x": 0.5,},
+    )
+
+    return figure
+
+
+def gender_age_plot():
+    """
+    docstring
+    """
+    labels = ["25-40", "40-55", "55-70", "70-85", "85-100"]
+    inpatient_target["Age_Category"] = pd.cut(
+        inpatient_target["Age"], bins=5, labels=labels
+    )
+    data = (
+        inpatient_target.groupby(["Age_Category", "BENE_SEX_IDENT_CD"])
+        .size()
+        .reset_index()
+    )
+    figure = px.bar(
+        data_frame=data,
+        x="Age_Category",
+        y=0,
+        color="BENE_SEX_IDENT_CD",
+        labels={
+            "Age_Category": "Age Bins",
+            "0": "PATIENTS",
+            "BENE_SEX_IDENT_CD": "PATIENT GENDER",
+        },
+    )
+    figure.update_layout(
+        barmode="group",
+        title={"text": "Distribution of Gender vs Age", "y": 0.9, "x": 0.5,},
+    )
+
     return figure
 
 
@@ -134,7 +199,7 @@ tab_1_layout = html.Div(
                 html.Div(
                     [
                         html.H6(
-                            "Race - Gender distribution", style={"textAlign": "center"}
+                            "Race - Gender Distribution", style={"textAlign": "center"}
                         ),
                         dcc.Graph(id="race_gender-graph-4", figure=gender_race_plot(),),
                     ],
@@ -143,12 +208,9 @@ tab_1_layout = html.Div(
                 html.Div(
                     [
                         html.H6(
-                            "Age - Gender Disrtibution", style={"textAlign": "center"}
+                            "Age - Gender Distribution", style={"textAlign": "center"}
                         ),
-                        dcc.Graph(
-                            id="example-graph-5",
-                            figure={"data": [], "layout": {"title": "Graph-5"}},
-                        ),
+                        dcc.Graph(id="age-gender-graph-5", figure=gender_age_plot(),),
                     ],
                     className="six columns",
                 ),
@@ -161,16 +223,13 @@ tab_1_layout = html.Div(
                 html.Div(
                     [
                         html.H6(
-                            "Race - Age Disrtibution", style={"textAlign": "center"}
+                            "Race - Age Distribution", style={"textAlign": "center"}
                         ),
-                        dcc.Graph(
-                            id="example-graph-6",
-                            figure={"data": [], "layout": {"title": "Graph-6"},},
-                        ),
+                        dcc.Graph(id="age-race-graph-6", figure=race_age_plot(),),
                     ]
                 )
             ],
-            className="row",
+            className="six columns",
             style={"margin": "1% 3%"},
         ),
     ]
