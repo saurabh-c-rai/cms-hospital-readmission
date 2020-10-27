@@ -167,12 +167,6 @@ tab_1_layout = html.Div(
                     [
                         html.H6("Gender", style={"textAlign": "center"}),
                         dcc.Graph(id="gender-graph-1", figure=gender_pie_chart(),),
-                        html.Div(
-                            "Text here",
-                            style={"textAlign": "center"},
-                            className="CommentSection",
-                            id="GenderComments",
-                        ),
                     ],
                     className="four columns",
                 ),
@@ -203,7 +197,7 @@ tab_1_layout = html.Div(
                         ),
                         dcc.Graph(id="race_gender-graph-4", figure=gender_race_plot(),),
                     ],
-                    className="six columns",
+                    className="four columns",
                 ),
                 html.Div(
                     [
@@ -212,24 +206,19 @@ tab_1_layout = html.Div(
                         ),
                         dcc.Graph(id="age-gender-graph-5", figure=gender_age_plot(),),
                     ],
-                    className="six columns",
+                    className="four columns",
                 ),
-            ],
-            className="row",
-            style={"margin": "1% 3%"},
-        ),
-        html.Div(
-            [
                 html.Div(
                     [
                         html.H6(
-                            "Race - Age Distribution", style={"textAlign": "center"}
+                            "Race - Age Distribution", style={"textAlign": "center"},
                         ),
                         dcc.Graph(id="age-race-graph-6", figure=race_age_plot(),),
-                    ]
-                )
+                    ],
+                    className="four columns",
+                ),
             ],
-            className="six columns",
+            className="row",
             style={"margin": "1% 3%"},
         ),
     ]

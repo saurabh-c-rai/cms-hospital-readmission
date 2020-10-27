@@ -52,12 +52,6 @@ def render_content(tab):
         return patient_med_readmit.tab_2_layout
 
 
-@app.callback(Output("GenderComments", "children"), [Input("tabs", "value")])
-def change_text(tab):
-    if tab == "dem_tab":
-        return "Higher Female Representation in Dataset"
-
-
 if __name__ == "__main__":
     app.run_server(debug=True)
 
