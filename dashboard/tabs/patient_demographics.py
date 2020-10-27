@@ -5,8 +5,7 @@ import dash_html_components as html
 import numpy as np
 import pandas as pd
 from dash.dependencies import Input, Output
-from dash.dependencies import Input, Output
-import plotly.graph_objs as go
+import plotly.graph_objects as go
 import sqlite3
 import plotly.express as px
 from utils.CategorizeCardinalData import (
@@ -14,6 +13,7 @@ from utils.CategorizeCardinalData import (
     ProcedureCodeCategoryCreator,
     DiagnosisCodeCategoryCreator,
 )
+from plotly.subplots import make_subplots
 
 #%%
 import json
@@ -128,13 +128,15 @@ def age_barplot():
     labels = ["25-40", "40-55", "55-70", "70-85", "85-100"]
     data = inpatient_target.drop_duplicates(subset=["DESYNPUF_ID", "Age"], keep="last")
     age_data_bins = pd.cut(data["Age"], bins=5, labels=labels).value_counts()
-    fig = px.bar(
+    figure = px.bar(
         data_frame=age_data_bins,
         x=age_data_bins.index,
         y=age_data_bins.values,
+        text=age_data_bins.values,
         labels={"index": "Age Bins", "y": "Count"},
     )
-    return fig
+    figure.update_traces(textposition="outside",)
+    return figure
 
 
 def gender_race_plot():
@@ -151,6 +153,7 @@ def gender_race_plot():
         data_frame=data,
         x="BENE_RACE_CD",
         y=0,
+        text=0,
         color="BENE_SEX_IDENT_CD",
         labels={
             "BENE_RACE_CD": "RACE",
@@ -158,6 +161,8 @@ def gender_race_plot():
             "BENE_SEX_IDENT_CD": "PATIENT GENDER",
         },
     )
+    figure.update_traces(textposition="outside",)
+    figure.update_layout(barmode="group",)
     return figure
 
 
@@ -177,6 +182,7 @@ def race_age_plot():
         x="Age_Category",
         y=0,
         color="BENE_RACE_CD",
+        text=0,
         labels={
             "Age_Category": "Age Bins",
             "0": "PATIENTS",
@@ -187,6 +193,7 @@ def race_age_plot():
         # barmode="group",
         title={"text": "Distribution of Race vs Age", "y": 0.9, "x": 0.5,},
     )
+    figure.update_traces(textposition="outside",)
 
     return figure
 
@@ -208,6 +215,7 @@ def gender_age_plot():
         data_frame=data,
         x="Age_Category",
         y=0,
+        text=0,
         color="BENE_SEX_IDENT_CD",
         labels={
             "Age_Category": "Age Bins",
@@ -215,6 +223,7 @@ def gender_age_plot():
             "BENE_SEX_IDENT_CD": "PATIENT GENDER",
         },
     )
+    figure.update_traces(textposition="outside",)
     figure.update_layout(
         barmode="group",
         title={"text": "Distribution of Gender vs Age", "y": 0.9, "x": 0.5,},
@@ -300,6 +309,73 @@ def prvdr_num_plot():
     return figure
 
 
+def procedure_code_plot():
+    """
+    docstring
+    """
+    data = (
+        inpatient_target[["DESYNPUF_ID", "ICD9_PRCDR_CD_1_INP_CAT"]]
+        .drop_duplicates()
+        .groupby(["ICD9_PRCDR_CD_1_INP_CAT"])["DESYNPUF_ID"]
+        .size()
+        .reset_index()
+    )
+    figure = px.bar(
+        data_frame=data,
+        x="ICD9_PRCDR_CD_1_INP_CAT",
+        y="DESYNPUF_ID",
+        text="DESYNPUF_ID",
+        labels={
+            "ICD9_PRCDR_CD_1_INP_CAT": "PROCEDURE GROUPS",
+            "DESYNPUF_ID": "PATIENTS COUNT",
+        },
+    )
+    figure.update_traces(textposition="outside",)
+    figure.update_layout(
+        barmode="group",
+        title={"text": "PROCEDURE PERFORMED ON PATIENT", "y": 0.9, "x": 0.5,},
+    )
+    return figure
+
+
+def diagnosis_code_plot():
+    """
+    docstring
+    """
+    diagnosis_category = [
+        col for col in inpatient_target if ("DGNS" in col) & ("CAT" in col)
+    ]
+    figure = make_subplots(
+        rows=5,
+        cols=2,
+        subplot_titles=diagnosis_category,
+        row_heights=[250, 250, 250, 250, 250],
+    )
+
+    for index, col in enumerate(diagnosis_category):
+        data = (
+            inpatient_target[["DESYNPUF_ID", col]]
+            .drop_duplicates()
+            .groupby(col)["DESYNPUF_ID"]
+            .size()
+            .reset_index()
+        )
+        figure.add_trace(
+            go.Bar(
+                x=data[col],
+                y=data["DESYNPUF_ID"],
+                name=col,
+                text=data["DESYNPUF_ID"],
+                textposition="outside",
+                # height=200,
+            ),
+            row=(index // 2) + 1,
+            col=(index % 2) + 1,
+        )
+    figure.update_layout(height=1200, title_text="Diagnosis Code vs Patient Count")
+    return figure
+
+
 #%%
 tab_1_layout = html.Div(
     [
@@ -381,19 +457,46 @@ tab_1_layout = html.Div(
                         html.H6(
                             "Provider Num Distribution", style={"textAlign": "center"}
                         ),
-                        dcc.Graph(id="prvdr_num-graph-5", figure=prvdr_num_plot(),),
+                        dcc.Graph(id="prvdr_num-graph-8", figure=prvdr_num_plot(),),
                     ],
                     className="six columns",
                 ),
-                # html.Div(
-                #     [
-                #         html.H6(
-                #             "Race - Age Distribution", style={"textAlign": "center"},
-                #         ),
-                #         dcc.Graph(id="age-race-graph-6", figure=race_age_plot(),),
-                #     ],
-                #     className="four columns",
-                # ),
+            ],
+            className="row",
+            style={"margin": "1% 3%"},
+        ),
+        html.Div(
+            [
+                html.Div(
+                    [
+                        html.H6(
+                            "Procedure Performed on Patient",
+                            style={"textAlign": "center"},
+                        ),
+                        dcc.Graph(
+                            id="procedure_code-graph-9", figure=procedure_code_plot(),
+                        ),
+                    ],
+                    className="twelve columns",
+                ),
+            ],
+            className="row",
+            style={"margin": "1% 3%"},
+        ),
+        html.Div(
+            [
+                html.Div(
+                    [
+                        html.H6(
+                            "Disease Category for Patient",
+                            style={"textAlign": "center"},
+                        ),
+                        dcc.Graph(
+                            id="diagnosis_code-graph-10", figure=diagnosis_code_plot(),
+                        ),
+                    ],
+                    className="twelve columns",
+                ),
             ],
             className="row",
             style={"margin": "1% 3%"},
