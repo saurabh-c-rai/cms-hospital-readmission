@@ -1,13 +1,12 @@
 import dash
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import dash_html_components as html
 import dash_core_components as dcc
 from tabs import patient_demographics, patient_med_readmit
-
 import pandas as pd
 import plotly.figure_factory as ff
 import numpy as np
-
+import requests
 import plotly.graph_objs as go
 
 external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
@@ -20,6 +19,16 @@ colors = {"background": "#F3F6FA", "background_div": "white", "text": "#009999"}
 
 app.config["suppress_callback_exceptions"] = True
 
+URL = "http://127.0.0.1:5000/predict"
+HEADER = {"Content-Type": "application/json"}
+
+ALLOWED_FIELDS = (
+    ["DESYNPUF_ID"]
+    + patient_med_readmit.numerical_fields
+    + patient_med_readmit.comorbidity_field
+    + patient_med_readmit.icd_diagnosis_fields
+    + patient_med_readmit.other_dropdown_fields
+)
 
 app.layout = html.Div(
     style={"backgroundColor": colors["background"]},
@@ -50,6 +59,18 @@ def render_content(tab):
         return patient_demographics.tab_1_layout
     elif tab == "med_tab":
         return patient_med_readmit.tab_2_layout
+
+
+@app.callback(
+    Output("out-all-types", "children"),
+    [Input("submit-button", "n_clicks")],
+    [State(f"{_}", "value") for _ in ALLOWED_FIELDS],
+)
+def check_output(n_clicks, *args):
+    payload = list(dict(zip(ALLOWED_FIELDS, [arg for arg in (args or [])])))
+    response = requests.request("POST", URL, headers=HEADER, data=payload)
+
+    return response
 
 
 if __name__ == "__main__":
