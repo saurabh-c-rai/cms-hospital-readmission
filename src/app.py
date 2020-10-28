@@ -31,14 +31,13 @@ def hello():
 
 @app.route("/predict", methods=["POST"])
 def predict():
-    rfc_rfe_randover_pipeline = joblib.load(
-        f"{MODEL_REPOSITORY_LOCATION}\\rfc_rfe_randover_pipeline.pkl"
-    )
-    if rfc_rfe_randover_pipeline:
+    rfc_pipeline = joblib.load(f"{MODEL_REPOSITORY_LOCATION}\\rfc_pipeline.pkl")
+    if rfc_pipeline:
         try:
             request_value = request.get_json()
+            print(request_value)
             model_columns = joblib.load(
-                f"{MODEL_REPOSITORY_LOCATION}\\rfc_rfe_randover_pipeline_cols.pkl"
+                f"{MODEL_REPOSITORY_LOCATION}\\model_columns.pkl"
             )
             dataframe = pd.DataFrame(columns=model_columns)
             for query in request_value:
@@ -47,9 +46,48 @@ def predict():
             dataframe = dataframe.applymap(
                 lambda x: np.nan if x in ["", "nan", "None", ""] else x
             )
-            prediction = rfc_rfe_randover_pipeline.predict(dataframe)
-            print("here:", prediction)
-            return jsonify({"prediction": str(prediction)})
+            categorical_features = [
+                "BENE_SEX_IDENT_CD",
+                "BENE_RACE_CD",
+                "BENE_ESRD_IND",
+                "SP_ALZHDMTA",
+                "SP_CHF",
+                "SP_CHRNKIDN",
+                "SP_CNCR",
+                "SP_COPD",
+                "SP_DEPRESSN",
+                "SP_DIABETES",
+                "SP_ISCHMCHT",
+                "SP_OSTEOPRS",
+                "SP_RA_OA",
+                "SP_STRKETIA",
+                "BENE_STATE_COUNTY_CODE",
+                "PRVDR_NUM_CAT_INP",
+                "ADMTNG_ICD9_DGNS_CD_CAT_INP",
+                "ICD9_DGNS_CD_1_CAT_INP",
+                "ICD9_DGNS_CD_2_CAT_INP",
+                "ICD9_DGNS_CD_3_CAT_INP",
+                "ICD9_DGNS_CD_4_CAT_INP",
+                "ICD9_DGNS_CD_5_CAT_INP",
+                "ICD9_DGNS_CD_6_CAT_INP",
+                "ICD9_DGNS_CD_7_CAT_INP",
+                "ICD9_DGNS_CD_8_CAT_INP",
+                "ICD9_DGNS_CD_9_CAT_INP",
+                "ICD9_PRCDR_CD_1_CAT_INP",
+            ]
+            dataframe[categorical_features] = dataframe[categorical_features].astype(
+                "category"
+            )
+            prediction = rfc_pipeline.predict_proba(dataframe)
+            pos_prediction = prediction[:, 1]
+            final_predicion = (pos_prediction > 0.364).astype("int")
+            final_predicion = list(
+                zip(dataframe["DESYNPUF_ID"].tolist(), final_predicion)
+            )
+            print(
+                "here:", list(zip(dataframe["DESYNPUF_ID"].tolist(), final_predicion))
+            )
+            return jsonify({"prediction": str(final_predicion)})
 
         except:
             return jsonify({"trace": traceback.format_exc()})
