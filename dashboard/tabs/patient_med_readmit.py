@@ -6,57 +6,55 @@ import pandas as pd
 from tabs.patient_demographics import preprocess_data, inpatient_target
 
 #%%
-numerical_fields = [
-    "BENE_HI_CVRAGE_TOT_MONS",
-    "BENE_SMI_CVRAGE_TOT_MONS",
-    "BENE_HMO_CVRAGE_TOT_MONS",
-    "PLAN_CVRG_MOS_NUM",
-    "MEDREIMB_IP",
-    "BENRES_IP",
-    "PPPYMT_IP",
-    "MEDREIMB_OP",
-    "BENRES_OP",
-    "PPPYMT_OP",
-    "MEDREIMB_CAR",
-    "BENRES_CAR",
-    "PPPYMT_CAR",
-    "CLM_PMT_AMT_INP",
-    "NCH_PRMRY_PYR_CLM_PD_AMT_INP",
-    "CLM_ADMSN_DT_INP",
-    "CLM_PASS_THRU_PER_DIEM_AMT_INP",
-    "NCH_BENE_IP_DDCTBL_AMT_INP",
-    "NCH_BENE_PTA_COINSRNC_LBLTY_AM_INP",
-    "NCH_BENE_BLOOD_DDCTBL_LBLTY_AM_INP",
-    "CLM_UTLZTN_DAY_CNT_INP",
-    "NCH_BENE_DSCHRG_DT_INP",
-    "TotalOutpatientVist",
-]
+numerical_fields = {
+    "BENE_HI_CVRAGE_TOT_MONS": 12,
+    "BENE_SMI_CVRAGE_TOT_MONS": 12,
+    "BENE_HMO_CVRAGE_TOT_MONS": 0,
+    "PLAN_CVRG_MOS_NUM": 10,
+    "MEDREIMB_IP": 6090,
+    "BENRES_IP": 1068,
+    "PPPYMT_IP": 0,
+    "MEDREIMB_OP": 0,
+    "BENRES_OP": 0,
+    "PPPYMT_OP": 0,
+    "MEDREIMB_CAR": 1250,
+    "BENRES_CAR": 470,
+    "PPPYMT_CAR": 30,
+    "CLM_PMT_AMT_INP": 6000,
+    "NCH_PRMRY_PYR_CLM_PD_AMT_INP": 0.0,
+    "CLM_PASS_THRU_PER_DIEM_AMT_INP": 30,
+    "NCH_BENE_IP_DDCTBL_AMT_INP": 1068,
+    "NCH_BENE_PTA_COINSRNC_LBLTY_AM_INP": 0,
+    "NCH_BENE_BLOOD_DDCTBL_LBLTY_AM_INP": 0,
+    "CLM_UTLZTN_DAY_CNT_INP": 3,
+    "TotalOutpatientVist": 5,
+}
 #%%
-comorbidity_field = [
-    "SP_ALZHDMTA",
-    "SP_CHF",
-    "SP_CHRNKIDN",
-    "SP_CNCR",
-    "SP_COPD",
-    "SP_DEPRESSN",
-    "SP_DIABETES",
-    "SP_ISCHMCHT",
-    "SP_OSTEOPRS",
-    "SP_RA_OA",
-    "SP_STRKETIA",
-]
-icd_diagnosis_fields = [
-    "ADMTNG_ICD9_DGNS_CD_INP_CAT",
-    "ICD9_DGNS_CD_1_INP_CAT",
-    "ICD9_DGNS_CD_2_INP_CAT",
-    "ICD9_DGNS_CD_3_INP_CAT",
-    "ICD9_DGNS_CD_4_INP_CAT",
-    "ICD9_DGNS_CD_5_INP_CAT",
-    "ICD9_DGNS_CD_6_INP_CAT",
-    "ICD9_DGNS_CD_7_INP_CAT",
-    "ICD9_DGNS_CD_8_INP_CAT",
-    "ICD9_DGNS_CD_9_INP_CAT",
-]
+comorbidity_field = {
+    "SP_ALZHDMTA": 1,
+    "SP_CHF": 1,
+    "SP_CHRNKIDN": 1,
+    "SP_CNCR": 2,
+    "SP_COPD": 2,
+    "SP_DEPRESSN": 1,
+    "SP_DIABETES": 1,
+    "SP_ISCHMCHT": 1,
+    "SP_OSTEOPRS": 2,
+    "SP_RA_OA": 2,
+    "SP_STRKETIA": 2,
+}
+icd_diagnosis_fields = {
+    "ADMTNG_ICD9_DGNS_CD_INP_CAT": "580-629",
+    "ICD9_DGNS_CD_1_INP_CAT": "580-629",
+    "ICD9_DGNS_CD_2_INP_CAT": "680-709",
+    "ICD9_DGNS_CD_3_INP_CAT": "240-279",
+    "ICD9_DGNS_CD_4_INP_CAT": "390-459",
+    "ICD9_DGNS_CD_5_INP_CAT": "V01-V91",
+    "ICD9_DGNS_CD_6_INP_CAT": "290-319",
+    "ICD9_DGNS_CD_7_INP_CAT": "240-279",
+    "ICD9_DGNS_CD_8_INP_CAT": "320-389",
+    "ICD9_DGNS_CD_9_INP_CAT": "290-319",
+}
 
 other_dropdown_fields = [
     "BENE_RACE_CD",
@@ -67,7 +65,7 @@ other_dropdown_fields = [
 ]
 #%%
 diagnosid_code_category = (
-    inpatient_target[icd_diagnosis_fields].melt()["value"].unique()
+    inpatient_target[icd_diagnosis_fields.keys()].melt()["value"].unique()
 )
 #%%
 map_comorbity = [
@@ -122,6 +120,7 @@ tab_2_layout = html.Div(
                     id="DESYNPUF_ID",
                     type="text",
                     placeholder="DESYNPUF_ID",
+                    value="Test Patient",
                     debounce=True,
                     className="oper__input",
                 ),
@@ -133,21 +132,22 @@ tab_2_layout = html.Div(
                 html.Div(
                     [
                         html.P(
-                            children=[f"ENTER {_}"],
-                            id=f"{_}_LABEL",
+                            children=[f"ENTER {k}"],
+                            id=f"{k}_LABEL",
                             className="input__heading",
                         ),
                         dcc.Input(
-                            id=f"{_}",
+                            id=f"{k}",
                             type="number",
-                            placeholder=f"{_}",
+                            placeholder=f"{k}",
                             debounce=True,
+                            value=v,
                             className="oper__input",
                         ),
                     ],
                     className="input__container",
                 )
-                for _ in numerical_fields
+                for k, v in numerical_fields.items()
             ]
         ),
         html.Div(
@@ -155,20 +155,21 @@ tab_2_layout = html.Div(
                 html.Div(
                     [
                         html.P(
-                            children=[f"SELECT IF PATIENT HAS {_}"],
-                            id=f"{_}_LABEL",
+                            children=[f"SELECT IF PATIENT HAS {k}"],
+                            id=f"{k}_LABEL",
                             className="input__heading",
                         ),
                         dcc.Dropdown(
-                            id=f"{_}",
+                            id=f"{k}",
                             options=map_comorbity,
+                            value=v,
                             className="reag__select",
-                            placeholder=f"Select {_}.",
+                            placeholder=f"Select {k}.",
                         ),
                     ],
                     className="dropdown__container",
                 )
-                for _ in comorbidity_field
+                for k, v in comorbidity_field.items()
             ]
         ),
         html.Div(
@@ -183,6 +184,7 @@ tab_2_layout = html.Div(
                         dcc.Dropdown(
                             id="BENE_RACE_CD",
                             options=map_race,
+                            value=5,
                             className="reag__select",
                             placeholder="Select BENE_RACE_CD.",
                         ),
@@ -199,6 +201,7 @@ tab_2_layout = html.Div(
                         dcc.Dropdown(
                             id="BENE_SEX_IDENT_CD",
                             options=map_gender,
+                            value=2,
                             className="reag__select",
                             placeholder="Select BENE_SEX_IDENT_CD.",
                         ),
@@ -215,6 +218,7 @@ tab_2_layout = html.Div(
                         dcc.Dropdown(
                             id="BENE_ESRD_IND",
                             options=map_esrd,
+                            value="0",
                             className="reag__select",
                             placeholder="Select BENE_ESRD_IND.",
                         ),
@@ -231,6 +235,7 @@ tab_2_layout = html.Div(
                         dcc.Dropdown(
                             id="PRVDR_NUM_CAT",
                             options=map_prvdr_num_cat,
+                            value="0001-0879",
                             className="reag__select",
                             placeholder="Select PRVDR_NUM_CAT.",
                         ),
@@ -247,6 +252,7 @@ tab_2_layout = html.Div(
                         dcc.Dropdown(
                             id="ICD9_PRCDR_CD_1_INP_CAT",
                             options=map_procedure_code,
+                            value="60-64",
                             className="reag__select",
                             placeholder="Select ICD9_PRCDR_CD_1_INP_CAT.",
                         ),
@@ -258,20 +264,21 @@ tab_2_layout = html.Div(
                         html.Div(
                             [
                                 html.P(
-                                    children=[f"SELECT {_} FOR THE PATIENT"],
-                                    id=f"{_}_LABEL",
+                                    children=[f"SELECT {k} FOR THE PATIENT"],
+                                    id=f"{k}_LABEL",
                                     className="input__heading",
                                 ),
                                 dcc.Dropdown(
-                                    id=f"{_}",
+                                    id=f"{k}",
                                     options=map_diagnosis_code,
+                                    value=v,
                                     className="reag__select",
-                                    placeholder=f"Select {_} FOR THE PATIENT.",
+                                    placeholder=f"Select {k} FOR THE PATIENT.",
                                 ),
                             ],
                             className="dropdown__container",
                         )
-                        for _ in icd_diagnosis_fields
+                        for k, v in icd_diagnosis_fields.items()
                     ]
                 ),
                 html.Div(

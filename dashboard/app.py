@@ -1,3 +1,4 @@
+#%%
 import dash
 from dash.dependencies import Input, Output, State
 import dash_html_components as html
@@ -8,7 +9,9 @@ import plotly.figure_factory as ff
 import numpy as np
 import requests
 import plotly.graph_objs as go
+import json
 
+#%%
 external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
@@ -18,18 +21,18 @@ server = app.server
 colors = {"background": "#F3F6FA", "background_div": "white", "text": "#009999"}
 
 app.config["suppress_callback_exceptions"] = True
-
+#%%
 URL = "http://127.0.0.1:5000/predict"
 HEADER = {"Content-Type": "application/json"}
 
 ALLOWED_FIELDS = (
     ["DESYNPUF_ID"]
-    + patient_med_readmit.numerical_fields
-    + patient_med_readmit.comorbidity_field
-    + patient_med_readmit.icd_diagnosis_fields
+    + list(patient_med_readmit.numerical_fields.keys())
+    + list(patient_med_readmit.comorbidity_field.keys())
+    + list(patient_med_readmit.icd_diagnosis_fields.keys())
     + patient_med_readmit.other_dropdown_fields
 )
-
+#%%
 app.layout = html.Div(
     style={"backgroundColor": colors["background"]},
     children=[
@@ -41,7 +44,7 @@ app.layout = html.Div(
             id="tabs",
             className="row",
             style={"margin": "2% 3%", "height": "20", "verticalAlign": "middle"},
-            value="dem_tab",
+            value="med_tab",
             children=[
                 dcc.Tab(label="Demographics", value="dem_tab"),
                 dcc.Tab(label="Medical Speciality And Re-Admission", value="med_tab")
@@ -52,7 +55,7 @@ app.layout = html.Div(
     ],
 )
 
-
+#%%
 @app.callback(Output("tabs-content", "children"), [Input("tabs", "value")])
 def render_content(tab):
     if tab == "dem_tab":
@@ -61,18 +64,19 @@ def render_content(tab):
         return patient_med_readmit.tab_2_layout
 
 
+#%%
 @app.callback(
     Output("out-all-types", "children"),
     [Input("submit-button", "n_clicks")],
     [State(f"{_}", "value") for _ in ALLOWED_FIELDS],
 )
-def check_output(n_clicks, *args):
-    payload = list(dict(zip(ALLOWED_FIELDS, [arg for arg in (args or [])])))
-    response = requests.request("POST", URL, headers=HEADER, data=payload)
+def get_prediction_from_model(n_clicks, *args):
+    payload = dict(zip(ALLOWED_FIELDS, [arg for arg in (args or [])]))
+    response = requests.request("POST", URL, headers=HEADER, data=json.dumps([payload]))
+    return str(response.text.encode("utf8"))
 
-    return response
 
-
+#%%
 if __name__ == "__main__":
     app.run_server(debug=True)
 
