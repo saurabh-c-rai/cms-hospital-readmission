@@ -218,7 +218,7 @@ selected_data.loc[:, "Readmission_Day_Count"] = (
 ).apply(lambda x: x.days)
 
 # if the Readmission_Day_Count <= 30, the Unplanned readmission is 1 or else 0
-selected_data.loc[:, "Readmission_within_30days"] = (
+selected_data.loc[:, "IsReadmitted"] = (
     selected_data.loc[:, "Readmission_Day_Count"] <= 30
 ) * 1
 
@@ -228,26 +228,22 @@ selected_data.sort_values(
 )
 #%%
 # Removing the not readmitted record for the patient which have atleast one admitted record
-readmitted_patients_data = selected_data.loc[
-    (selected_data["Readmission_within_30days"] == 1), :
-]
+readmitted_patients_data = selected_data.loc[(selected_data["IsReadmitted"] == 1), :]
 readmitted_patients = readmitted_patients_data.loc[:, "DESYNPUF_ID"].unique()
 
 drop_index = selected_data.loc[
     (selected_data["DESYNPUF_ID"].isin(readmitted_patients))
-    & (selected_data["Readmission_within_30days"] == 0)
+    & (selected_data["IsReadmitted"] == 0)
 ].index
 
 selected_data.drop(index=drop_index, axis=0, inplace=True)
-readmitted_patients_data = selected_data.loc[
-    (selected_data["Readmission_within_30days"] == 1), :
-]
+readmitted_patients_data = selected_data.loc[(selected_data["IsReadmitted"] == 1), :]
 not_readmitted_patients_data = selected_data.loc[
-    (selected_data["Readmission_within_30days"] == 0), :
+    (selected_data["IsReadmitted"] == 0), :
 ]
 
 # Uncomment the below line to remove duplicate patient from non readmitted data
-# not_readmitted_patients_data.drop_duplicates(subset=["DESYNPUF_ID", "Readmission_within_30days"], keep='last', inplace=True)
+# not_readmitted_patients_data.drop_duplicates(subset=["DESYNPUF_ID", "IsReadmitted"], keep='last', inplace=True)
 
 final_inpatient_data = pd.concat(
     [readmitted_patients_data, not_readmitted_patients_data], axis=0
@@ -469,7 +465,7 @@ categorical_features = [
     # "HCPCS_CD_3_CAT_OUT",
     # "ICD9_DGNS_CD_1_CAT_OUT",
     # "ICD9_DGNS_CD_2_CAT_OUT",
-    "Readmission_within_30days_INP",
+    "IsReadmitted",
     # "BENE_AGE_CAT"
     # "AT_PHYSN_NPI_OUT",
     # "AT_PHYSN_NPI_INP",
@@ -521,8 +517,8 @@ df.drop(columns=cols_to_drop + date_cols + npi_cols, inplace=True, axis=1)
 # df.drop(columns="BENRES_IP", inplace=True, axis=1)
 
 # %%
-X = df.drop(columns=["Readmission_within_30days_INP"], axis=1)
-y = df.loc[:, "Readmission_within_30days_INP"]
+X = df.drop(columns=["IsReadmitted"], axis=1)
+y = df.loc[:, "IsReadmitted"]
 
 
 # %%
@@ -563,7 +559,7 @@ X_train.columns
 # %%
 
 for c in categorical_features:
-    ct.TestIndependence(c, "Readmission_within_30days_INP")
+    ct.TestIndependence(c, "IsReadmitted")
 
 # %%
 #%%
@@ -577,7 +573,12 @@ constant_imputer = SimpleImputer(
 )
 ordinal_encoder = OrdinalEncoder()
 
-
+#%%
+# Initializing custom pipelines
+cardinality_reducer = CardinalityReducer(
+    cutt_off=INFREQUENT_CATEGORY_CUT_OFF, label=INFREQUENT_CATEGORY_LABEL
+)
+column_selector = SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True)
 # %%
 # Temp files for caching Pipelines
 numerical_cachedir = mkdtemp(prefix="num")
@@ -586,7 +587,7 @@ numerical_memory = Memory(location=numerical_cachedir, verbose=VERBOSE_PARAM_VAL
 categorical_cachedir = mkdtemp(prefix="cat")
 categorical_memory = Memory(location=categorical_cachedir, verbose=VERBOSE_PARAM_VALUE)
 
-pipeline_cachedir = mkdtemp(prefix="cat")
+pipeline_cachedir = mkdtemp(prefix="pipe")
 pipeline_memory = Memory(location=pipeline_cachedir, verbose=VERBOSE_PARAM_VALUE)
 
 
@@ -827,6 +828,37 @@ class ModelTrainer(object):
         )
         self.metric_df = self.metric_df.append(self.current_metrics, ignore_index=True)
 
+    # apply threshold to positive probabilities to create labels
+    def _get_labels_at_threshold(self, pos_probs, threshold):
+        return (pos_probs >= threshold).astype("int")
+
+    def optimize_threshold(self):
+        # keep probabilities for the positive outcome only
+        probs = self.y_pred_proba[:, 1]
+        # define thresholds
+        thresholds = np.arange(0, 1, 0.001)
+        # evaluate each threshold
+        scores = [
+            f1_score(self.y_test, self._get_labels_at_threshold(probs, t))
+            for t in thresholds
+        ]
+        # get best threshold
+        ix = np.argmax(scores)
+        precision = precision_score(
+            self.y_test, self._get_labels_at_threshold(probs, thresholds[ix])
+        )
+        recall = recall_score(
+            self.y_test, self._get_labels_at_threshold(probs, thresholds[ix])
+        )
+        cnf_mat = confusion_matrix(
+            y_pred=self._get_labels_at_threshold(probs, thresholds[ix]),
+            y_true=self.y_test,
+        )
+        sns.heatmap(cnf_mat, annot=True, fmt="", cmap="Blues")
+        print(
+            f"Threshold={thresholds[ix]:.3f}, F-Score={scores[ix]:.5f}, Precision={precision}, Recall={recall}"
+        )
+
     def train_test_model(self, model):
         self.classifier = model
         print(f'{"="*40} {str(self.classifier)} {"="*40}')
@@ -878,10 +910,7 @@ preprocessing_transformer = ColumnTransformer(
 # Pipeline to automate drop of specified column and running the preprocessor for the remaining column
 preprocessing_pipeline = Pipeline(
     [
-        (
-            "column selector",
-            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
-        ),
+        ("column selector", column_selector,),
         ("Preprocessing Step", preprocessing_transformer),
     ],
     verbose=VERBOSE_PARAM_VALUE,
@@ -891,10 +920,7 @@ preprocessing_pipeline = Pipeline(
 #%%
 imblanced_preprocessing_pipeline_smote = imb_pipeline.Pipeline(
     [
-        (
-            "column selector",
-            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
-        ),
+        ("column selector", column_selector,),
         ("Preprocessing Step", preprocessing_transformer),
         ("SMOTE oversampling", smt),
     ],
@@ -904,10 +930,7 @@ imblanced_preprocessing_pipeline_smote = imb_pipeline.Pipeline(
 
 imblanced_preprocessing_pipeline_randover = imb_pipeline.Pipeline(
     [
-        (
-            "column selector",
-            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
-        ),
+        ("column selector", column_selector,),
         ("Preprocessing Step", preprocessing_transformer),
         ("Random oversampling", random_oversampling),
     ],
@@ -986,10 +1009,7 @@ logreg_rfe_pipeline = Pipeline(
 
 logreg_rfe_smote_pipeline = imb_pipeline.Pipeline(
     [
-        (
-            "drop columns",
-            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
-        ),
+        ("drop columns", column_selector,),
         ("Preprocessing Step", preprocessing_transformer),
         ("SMOTE oversampling", smt),
         ("Feature Selection", rfe_lr),
@@ -1001,10 +1021,7 @@ logreg_rfe_smote_pipeline = imb_pipeline.Pipeline(
 
 logreg_rfe_randover_pipeline = imb_pipeline.Pipeline(
     [
-        (
-            "drop columns",
-            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
-        ),
+        ("drop columns", column_selector,),
         ("Preprocessing Step", preprocessing_transformer),
         ("Random oversampling", random_oversampling),
         ("Feature Selection", rfe_lr),
@@ -1023,10 +1040,7 @@ logreg_pipeline = Pipeline(
 
 logreg_smote_pipeline = imb_pipeline.Pipeline(
     [
-        (
-            "drop columns",
-            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
-        ),
+        ("drop columns", column_selector,),
         ("Preprocessing Step", preprocessing_transformer),
         ("SMOTE oversampling", smt),
         ("LogReg_Classifier", lr),
@@ -1037,10 +1051,7 @@ logreg_smote_pipeline = imb_pipeline.Pipeline(
 
 logreg_randover_pipeline = imb_pipeline.Pipeline(
     [
-        (
-            "drop columns",
-            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
-        ),
+        ("drop columns", column_selector,),
         ("Preprocessing Step", preprocessing_transformer),
         ("Random oversampling", random_oversampling),
         ("LogReg_Classifier", lr),
@@ -1063,10 +1074,7 @@ dt_rfe_pipeline = Pipeline(
 
 dt_rfe_smote_pipeline = imb_pipeline.Pipeline(
     [
-        (
-            "drop columns",
-            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
-        ),
+        ("drop columns", column_selector,),
         ("Preprocessing Step", preprocessing_transformer),
         ("SMOTE oversampling", smt),
         ("Feature Selection", rfe_dt),
@@ -1078,10 +1086,7 @@ dt_rfe_smote_pipeline = imb_pipeline.Pipeline(
 
 dt_rfe_randover_pipeline = imb_pipeline.Pipeline(
     [
-        (
-            "drop columns",
-            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
-        ),
+        ("drop columns", column_selector,),
         ("Preprocessing Step", preprocessing_transformer),
         ("Random oversampling", random_oversampling),
         ("Feature Selection", rfe_dt),
@@ -1103,10 +1108,7 @@ rfc_rfe_pipeline = Pipeline(
 
 rfc_rfe_smote_pipeline = imb_pipeline.Pipeline(
     [
-        (
-            "drop columns",
-            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
-        ),
+        ("drop columns", column_selector,),
         ("Preprocessing Step", preprocessing_transformer),
         ("SMOTE oversampling", smt),
         ("Feature Selection", rfe_rfc),
@@ -1118,10 +1120,7 @@ rfc_rfe_smote_pipeline = imb_pipeline.Pipeline(
 
 rfc_rfe_randover_pipeline = imb_pipeline.Pipeline(
     [
-        (
-            "drop columns",
-            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
-        ),
+        ("drop columns", column_selector,),
         ("Preprocessing Step", preprocessing_transformer),
         ("Random oversampling", random_oversampling),
         ("Feature Selection", rfe_rfc),
@@ -1144,10 +1143,7 @@ extratrees_rfe_pipeline = Pipeline(
 
 extratrees_rfe_smote_pipeline = imb_pipeline.Pipeline(
     [
-        (
-            "drop columns",
-            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
-        ),
+        ("drop columns", column_selector,),
         ("Preprocessing Step", preprocessing_transformer),
         ("SMOTE oversampling", smt),
         ("Feature Selection", extratrees_rfc),
@@ -1159,10 +1155,7 @@ extratrees_rfe_smote_pipeline = imb_pipeline.Pipeline(
 
 extratrees_rfe_randover_pipeline = imb_pipeline.Pipeline(
     [
-        (
-            "drop columns",
-            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
-        ),
+        ("drop columns", column_selector,),
         ("Preprocessing Step", preprocessing_transformer),
         ("Random oversampling", random_oversampling),
         ("Feature Selection", extratrees_rfc),
@@ -1181,10 +1174,7 @@ dt_pipeline = Pipeline(
 
 dt_smote_pipeline = imb_pipeline.Pipeline(
     [
-        (
-            "drop columns",
-            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
-        ),
+        ("drop columns", column_selector,),
         ("Preprocessing Step", preprocessing_transformer),
         ("SMOTE Sampling", smt),
         ("Classifier", DecisionTreeClassifier(random_state=RANDOM_STATE)),
@@ -1195,10 +1185,7 @@ dt_smote_pipeline = imb_pipeline.Pipeline(
 
 dt_randover_pipeline = imb_pipeline.Pipeline(
     [
-        (
-            "drop columns",
-            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
-        ),
+        ("drop columns", column_selector,),
         ("Preprocessing Step", preprocessing_transformer),
         ("Random OverSampling", random_oversampling),
         ("Classifier", DecisionTreeClassifier(random_state=RANDOM_STATE)),
@@ -1215,10 +1202,7 @@ rfc_pipeline = Pipeline(
 
 rfc_smote_pipeline = imb_pipeline.Pipeline(
     [
-        (
-            "drop columns",
-            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
-        ),
+        ("drop columns", column_selector,),
         ("Preprocessing Step", preprocessing_transformer),
         ("SMOTE Sampling", smt),
         ("rfc_classifier", DecisionTreeClassifier(random_state=RANDOM_STATE)),
@@ -1229,10 +1213,7 @@ rfc_smote_pipeline = imb_pipeline.Pipeline(
 
 rfc_randover_pipeline = imb_pipeline.Pipeline(
     [
-        (
-            "drop columns",
-            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
-        ),
+        ("drop columns", column_selector,),
         ("Preprocessing Step", preprocessing_transformer),
         ("Random OverSampling", random_oversampling),
         ("rfc_classifier", DecisionTreeClassifier(random_state=RANDOM_STATE)),
@@ -1252,10 +1233,7 @@ extratrees_pipeline = Pipeline(
 
 extratrees_smote_pipeline = imb_pipeline.Pipeline(
     [
-        (
-            "drop columns",
-            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
-        ),
+        ("drop columns", column_selector,),
         ("Preprocessing Step", preprocessing_transformer),
         ("SMOTE Sampling", smt),
         ("extratrees_classifier", extratrees_clf),
@@ -1266,10 +1244,7 @@ extratrees_smote_pipeline = imb_pipeline.Pipeline(
 
 extratrees_randover_pipeline = imb_pipeline.Pipeline(
     [
-        (
-            "drop columns",
-            SelectColumnsTransfomer(columns=correlated_cols_drop_list, drop=True),
-        ),
+        ("drop columns", column_selector,),
         ("Preprocessing Step", preprocessing_transformer),
         ("Random OverSampling", random_oversampling),
         ("extratrees_classifier", extratrees_clf),
