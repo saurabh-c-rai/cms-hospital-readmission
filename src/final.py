@@ -38,6 +38,7 @@ from utils.CustomPipeline import (
     CardinalityReducer,
     get_ct_feature_names,
     SelectColumnsTransfomer,
+    CategoricalVariableImputer,
 )
 
 #%%
@@ -424,7 +425,7 @@ final_inpatient_data.columns = [
     for col in final_inpatient_data
 ]
 
-
+final_inpatient_data.rename(columns={"IsReadmitted_INP": "IsReadmitted"}, inplace=True)
 # %%
 final_df = pd.merge(
     left=combined_beneficiary_data_2,
@@ -551,10 +552,7 @@ ct = StatisticalTest.ChiSquare(pd.concat([X_train, y_train], axis=1))
 # %%
 # # Very high correlation between ('BENRES_OP', 'MEDREIMB_OP') & ('BENRES_CAR', 'MEDREIMB_CAR') hence adding one of them to correlated list for dropping one column in the pair
 
-correlated_cols_drop_list = [
-    "MEDREIMB_OP",
-    "MEDREIMB_CAR",
-]
+correlated_cols_drop_list = ["MEDREIMB_OP", "MEDREIMB_CAR", "BENE_STATE_COUNTY_CODE"]
 
 # %%
 X_train.columns
@@ -572,9 +570,11 @@ std_scalar = StandardScaler()
 min_max_scalar = MinMaxScaler()
 onehot_encoder = OneHotEncoder(drop="first", sparse=False)
 median_imputer = SimpleImputer(strategy="median", missing_values=np.nan)
-constant_imputer = SimpleImputer(
-    strategy="constant", fill_value=MISSING_VALUE_LABEL, missing_values=np.nan
-)
+constant_imputer = CategoricalVariableImputer(fill_value=MISSING_VALUE_LABEL)
+
+# SimpleImputer(
+#     strategy="constant", fill_value=MISSING_VALUE_LABEL, missing_values=np.nan
+# )
 ordinal_encoder = OrdinalEncoder()
 
 
@@ -843,7 +843,7 @@ preprocessing_transformer = ColumnTransformer(
     [
         (
             "categorical",
-            ord_categorical_transformer,
+            categorical_transformer,
             make_column_selector(dtype_include="category"),
         ),
         (
@@ -1355,15 +1355,13 @@ voting_clf = VotingClassifier(
 )
 ensemble_trainer.train_test_model(voting_clf)
 #%%
-# dump(
-#     rfc_rfe_randover_pipeline,
-#     f"{MODEL_REPOSITORY_LOCATION}\\rfc_rfe_randover_pipeline.pkl",
-# )
-# # %%
-# dump(
-#     X_train.columns.tolist(),
-#     f"{MODEL_REPOSITORY_LOCATION}\\rfc_rfe_randover_pipeline_cols.pkl",
-# )
+dump(
+    rfc_pipeline, f"{MODEL_REPOSITORY_LOCATION}\\rfc_pipeline.pkl",
+)
+# %%
+dump(
+    X_train.columns.tolist(), f"{MODEL_REPOSITORY_LOCATION}\\model_columns.pkl",
+)
 #%%
 # Initialize clustering objects
 kmeans_clustering = KMeans(

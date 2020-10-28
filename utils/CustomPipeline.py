@@ -18,6 +18,33 @@ HIGH_CARDINALITY_THRESHOLD = config[3]["HIGH_CARDINALITY_THRESHOLD"]
 DEFAULT_INFREQUENT_CATEGORY_CUT_OFF = config[3]["DEFAULT_INFREQUENT_CATEGORY_CUT_OFF"]
 DEFAULT_INFREQUENT_CATEGORY_LABEL = config[3]["DEFAULT_INFREQUENT_CATEGORY_LABEL"]
 #%%
+class CategoricalVariableImputer(BaseEstimator, TransformerMixin):
+    """Class to fill the missing values in Categorical Data
+
+        Args:
+            fill_value (str, optional): [description]. Defaults to "UNKNOWN".
+        """
+
+    def __init__(self, fill_value: str = "UNKNOWN") -> None:
+        self.fill_value = fill_value
+
+    def fit(self, X: pd.DataFrame, y=None):
+        """
+        docstring
+        """
+        return self
+
+    def transform(self, X: pd.DataFrame, y=None):
+        print(f"{__class__} Transform Method Called")
+        assert isinstance(X, pd.DataFrame)
+        for col in X:
+            X[col] = X[col].cat.add_categories(self.fill_value)
+            X[col] = X[col].fillna(value=self.fill_value)
+
+        return X
+
+
+#%%
 class CardinalityReducer(BaseEstimator, TransformerMixin):
     """Class to reduce Cardinality of the Categorical Columns
 
@@ -42,7 +69,7 @@ class CardinalityReducer(BaseEstimator, TransformerMixin):
     # Return self nothing else to do here
     def fit(self, X, y=None):
         print(f"{__class__} fit method called")
-        data = pd.DataFrame(X).astype("category")
+        data = pd.DataFrame(X)
         for col in data:
             isHighCardinal = data[col].nunique() > HIGH_CARDINALITY_THRESHOLD
             if isHighCardinal:
@@ -65,7 +92,7 @@ class CardinalityReducer(BaseEstimator, TransformerMixin):
         infrequent_categories = categories_frequency[
             categories_frequency <= self.cutt_off
         ].index
-        return infrequent_categories
+        return list(infrequent_categories)
 
     # Method that describes what we need this transformer to do
     def transform(self, X, y=None):
@@ -81,7 +108,6 @@ class CardinalityReducer(BaseEstimator, TransformerMixin):
         print(f"{__class__} Transform method called")
 
         data = pd.DataFrame(X).astype("category")
-        data.dtypes
         for col, infrequent_category in self.column_category.items():
             data[col] = data[col].cat.add_categories([self.label])
             data[col] = data[col].replace(infrequent_category, self.label)
