@@ -112,7 +112,7 @@ conn_object = sqlite3.connect("../database/cms_data.db")
 
 # %%
 query_string = """SELECT inp.DESYNPUF_ID, inp.CLM_FROM_DT AS CLM_FROM_DT_INP, inp.CLM_THRU_DT AS CLM_THRU_DT_INP, inp.PRVDR_NUM AS PRVDR_NUM_INP, inp.CLM_PMT_AMT AS CLM_PMT_AMT_INP, inp.NCH_PRMRY_PYR_CLM_PD_AMT AS NCH_PRMRY_PYR_CLM_PD_AMT_INP, inp.AT_PHYSN_NPI AS AT_PHYSN_NPI_INP, inp.OP_PHYSN_NPI AS OP_PHYSN_NPI_INP, inp.CLM_ADMSN_DT AS CLM_ADMSN_DT_INP, inp.CLM_PASS_THRU_PER_DIEM_AMT AS CLM_PASS_THRU_PER_DIEM_AMT_INP, inp.NCH_BENE_IP_DDCTBL_AMT AS NCH_BENE_IP_DDCTBL_AMT_INP, inp.NCH_BENE_PTA_COINSRNC_LBLTY_AM AS NCH_BENE_PTA_COINSRNC_LBLTY_AM_INP, inp.NCH_BENE_BLOOD_DDCTBL_LBLTY_AM AS NCH_BENE_BLOOD_DDCTBL_LBLTY_AM_INP, inp.CLM_UTLZTN_DAY_CNT AS CLM_UTLZTN_DAY_CNT_INP, inp.NCH_BENE_DSCHRG_DT AS NCH_BENE_DSCHRG_DT_INP, inp.CLM_DRG_CD AS CLM_DRG_CD_INP, inp.PRVDR_NUM_CAT AS PRVDR_NUM_CAT_INP, inp.Next_CLM_ADMSN_DT AS Next_CLM_ADMSN_DT_INP, 
-inp.Readmission_within_30days AS Readmission_within_30days_INP, inp.CLAIM_YEAR AS CLAIM_YEAR_INP, inp.ADMTNG_ICD9_DGNS_CD_CAT AS ADMTNG_ICD9_DGNS_CD_CAT_INP, inp.ICD9_DGNS_CD_1_CAT AS ICD9_DGNS_CD_1_CAT_INP, inp.ICD9_DGNS_CD_2_CAT AS ICD9_DGNS_CD_2_CAT_INP, inp.ICD9_DGNS_CD_3_CAT AS ICD9_DGNS_CD_3_CAT_INP, inp.ICD9_DGNS_CD_4_CAT AS ICD9_DGNS_CD_4_CAT_INP, 
+inp.IsReadmitted AS IsReadmitted, inp.CLAIM_YEAR AS CLAIM_YEAR_INP, inp.ADMTNG_ICD9_DGNS_CD_CAT AS ADMTNG_ICD9_DGNS_CD_CAT_INP, inp.ICD9_DGNS_CD_1_CAT AS ICD9_DGNS_CD_1_CAT_INP, inp.ICD9_DGNS_CD_2_CAT AS ICD9_DGNS_CD_2_CAT_INP, inp.ICD9_DGNS_CD_3_CAT AS ICD9_DGNS_CD_3_CAT_INP, inp.ICD9_DGNS_CD_4_CAT AS ICD9_DGNS_CD_4_CAT_INP, 
 inp.ICD9_DGNS_CD_5_CAT AS ICD9_DGNS_CD_5_CAT_INP, inp.ICD9_DGNS_CD_6_CAT AS ICD9_DGNS_CD_6_CAT_INP, inp.ICD9_DGNS_CD_7_CAT AS ICD9_DGNS_CD_7_CAT_INP, inp.ICD9_DGNS_CD_8_CAT AS ICD9_DGNS_CD_8_CAT_INP, inp.ICD9_DGNS_CD_9_CAT AS ICD9_DGNS_CD_9_CAT_INP, inp.ICD9_PRCDR_CD_1_CAT AS ICD9_PRCDR_CD_1_CAT_INP
 FROM Inpatient_claims_2 inp
 """
@@ -143,7 +143,7 @@ claim_data.columns
 
 
 # %%
-claim_data["Readmission_within_30days_INP"].value_counts() / claim_data.shape[0]
+claim_data["IsReadmitted"].value_counts() / claim_data.shape[0]
 
 
 # %%
@@ -189,7 +189,7 @@ final_df.head()
 
 
 # %%
-final_df["Readmission_within_30days_INP"].value_counts() / final_df.shape[0]
+final_df["IsReadmitted"].value_counts() / final_df.shape[0]
 
 
 # %%
@@ -227,7 +227,7 @@ categorical_features = [
     # "HCPCS_CD_3_CAT_OUT",
     # "ICD9_DGNS_CD_1_CAT_OUT",
     # "ICD9_DGNS_CD_2_CAT_OUT",
-    "Readmission_within_30days_INP",
+    "IsReadmitted",
     # "BENE_AGE_CAT"
     # "AT_PHYSN_NPI_OUT",
     # "AT_PHYSN_NPI_INP",
@@ -310,8 +310,8 @@ df.dtypes
 
 
 # %%
-X = df.drop(columns=["Readmission_within_30days_INP"], axis=1)
-y = df.loc[:, "Readmission_within_30days_INP"]
+X = df.drop(columns=["IsReadmitted"], axis=1)
+y = df.loc[:, "IsReadmitted"]
 
 
 # %%
@@ -362,7 +362,7 @@ ct = ChiSquare(pd.concat([X_train, y_train], axis=1))
 # #%%
 # distribution_age = pd.crosstab(
 #     pd.cut(df["BENE_AGE"], bins=5, labels=["25-40", "40-55", "55-70", "70-85", "85+"]),
-#     df["Readmission_within_30days_INP"],
+#     df["IsReadmitted"],
 #     normalize="index",
 # )
 
@@ -388,7 +388,7 @@ X_train.columns
 # %%
 
 for c in categorical_features:
-    ct.TestIndependence(c, "Readmission_within_30days_INP")
+    ct.TestIndependence(c, "IsReadmitted")
 
 
 # %%

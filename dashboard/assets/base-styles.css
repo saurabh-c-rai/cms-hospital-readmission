@@ -607,3 +607,69 @@ there.
 /* Larger than Desktop HD */
 @media (min-width: 1200px) {
 }
+
+.input__heading {
+  font-size: 15px;
+  color: #505050;
+  font-family: sans-serif;
+  margin-bottom: 20px;
+}
+
+.input__container {
+  margin-top: 35px;
+  margin-right: auto;
+}
+
+.dropdown__container {
+  margin-top: 35px;
+  margin-bottom: 45px;
+  margin-right: auto;
+}
+
+.oper__input {
+  width: 25%;
+  height: 30px;
+  font-size: 15px;
+  font-family: sans-serif;
+  color: #787878;
+  margin-right: auto;
+}
+
+.reag__select {
+  width: 25%;
+  height: 30px;
+  font-size: 15px;
+  font-family: sans-serif;
+  color: #787878;
+  margin-right: auto;
+}
+
+.time__input {
+  width: 99%;
+  height: 30px;
+  font-size: 15px;
+  font-family: sans-serif;
+}
+
+.vol__input {
+  width: 99%;
+  height: 30px;
+  font-size: 15px;
+  font-family: sans-serif;
+}
+
+.submit__button {
+  margin-top: 20px;
+  background-color: white; 
+  color: #0066CC;
+  border: 1px solid #0066CC;
+  height: 35px;
+  
+}
+
+.add__button {
+  background-color: white; 
+  color: #0066CC;
+  border: 1px solid #0066CC;
+  height: 35px;
+}
