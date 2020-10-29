@@ -3,13 +3,17 @@ import dash
 from dash.dependencies import Input, Output, State
 import dash_html_components as html
 import dash_core_components as dcc
-from tabs import patient_demographics, patient_med_readmit
-import pandas as pd
+from dashboard.tabs import (
+    patient_demographics,
+    patient_med_readmit,
+    readmission_plots,
+)
 import plotly.figure_factory as ff
 import numpy as np
 import requests
 import plotly.graph_objs as go
 import json
+import dash_daq as daq
 
 #%%
 external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
@@ -18,7 +22,7 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 server = app.server
 
-colors = {"background": "#F3F6FA", "background_div": "white", "text": "#009999"}
+colors = {"background": "#F3F6FA", "background_div": "white", "text": "black"}
 
 app.config["suppress_callback_exceptions"] = True
 #%%
@@ -34,17 +38,20 @@ ALLOWED_FIELDS = (
 )
 #%%
 app.layout = html.Div(
-    style={"backgroundColor": colors["background"]},
+    style={"backgroundColor": colors["background"], "color": colors["text"]},
     children=[
-        html.H1(
-            "Patient Re-admissions Dashboard",
-            style={"textAlign": "center", "color": colors["text"]},
+        html.H1("Patient Re-admissions Dashboard", style={"textAlign": "center",},),
+        daq.ToggleSwitch(  # pylint: disable=not-callable
+            id="Toggle",
+            value=True,
+            label={"label": "Include Readmission",},
+            labelPosition="bottom",
         ),
         dcc.Tabs(
             id="tabs",
             className="row",
             style={"margin": "2% 3%", "height": "20", "verticalAlign": "middle"},
-            value="med_tab",
+            value="dem_tab",
             children=[
                 dcc.Tab(label="Demographics", value="dem_tab"),
                 dcc.Tab(label="Medical Speciality And Re-Admission", value="med_tab")
@@ -56,10 +63,16 @@ app.layout = html.Div(
 )
 
 #%%
-@app.callback(Output("tabs-content", "children"), [Input("tabs", "value")])
-def render_content(tab):
+@app.callback(
+    Output("tabs-content", "children"),
+    [Input("tabs", "value"), Input("Toggle", "value"),],
+)
+def render_content(tab, toggle_value):
     if tab == "dem_tab":
-        return patient_demographics.tab_1_layout
+        if toggle_value:
+            return patient_demographics.tab_1_layout
+        else:
+            return readmission_plots.tab_1_layout
     elif tab == "med_tab":
         return patient_med_readmit.tab_2_layout
 
@@ -71,9 +84,12 @@ def render_content(tab):
     [State(f"{_}", "value") for _ in ALLOWED_FIELDS],
 )
 def get_prediction_from_model(n_clicks, *args):
-    payload = dict(zip(ALLOWED_FIELDS, [arg for arg in (args or [])]))
-    response = requests.request("POST", URL, headers=HEADER, data=json.dumps([payload]))
-    return str(response.text.encode("utf8"))
+    if n_clicks > 1:
+        payload = dict(zip(ALLOWED_FIELDS, [arg for arg in (args or [])]))
+        response = requests.request(
+            "POST", URL, headers=HEADER, data=json.dumps([payload])
+        )
+        return str(response.text.encode("utf8"))
 
 
 #%%
