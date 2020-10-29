@@ -3,8 +3,11 @@ import dash
 from dash.dependencies import Input, Output, State
 import dash_html_components as html
 import dash_core_components as dcc
-from tabs import patient_demographics, patient_med_readmit, readmission_plots
-import pandas as pd
+from dashboard.tabs import (
+    patient_demographics,
+    patient_med_readmit,
+    readmission_plots,
+)
 import plotly.figure_factory as ff
 import numpy as np
 import requests
@@ -35,15 +38,12 @@ ALLOWED_FIELDS = (
 )
 #%%
 app.layout = html.Div(
-    style={"backgroundColor": colors["background"]},
+    style={"backgroundColor": colors["background"], "color": colors["text"]},
     children=[
-        html.H1(
-            "Patient Re-admissions Dashboard",
-            style={"textAlign": "center", "color": colors["text"]},
-        ),
-        daq.ToggleSwitch(
+        html.H1("Patient Re-admissions Dashboard", style={"textAlign": "center",},),
+        daq.ToggleSwitch(  # pylint: disable=not-callable
             id="Toggle",
-            value=False,
+            value=True,
             label={"label": "Include Readmission",},
             labelPosition="bottom",
         ),

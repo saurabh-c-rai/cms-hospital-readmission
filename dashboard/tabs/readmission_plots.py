@@ -104,170 +104,97 @@ def preprocess_data(dataframe: pd.DataFrame):
 #%%
 inpatient_target = pd.read_sql("SELECT * FROM InPatient_Target", con=conn_object)
 inpatient_target = preprocess_data(inpatient_target)
-
 #%%
+continous_cols = [
+    "BENE_HI_CVRAGE_TOT_MONS",
+    "BENE_SMI_CVRAGE_TOT_MONS",
+    "BENE_HMO_CVRAGE_TOT_MONS",
+    "PLAN_CVRG_MOS_NUM",
+    "MEDREIMB_IP",
+    "BENRES_IP",
+    "PPPYMT_IP",
+    "MEDREIMB_OP",
+    "BENRES_OP",
+    "PPPYMT_OP",
+    "MEDREIMB_CAR",
+    "BENRES_CAR",
+    "PPPYMT_CAR",
+    "NCH_PRMRY_PYR_CLM_PD_AMT_INP",
+    "CLM_PASS_THRU_PER_DIEM_AMT_INP",
+    "NCH_BENE_IP_DDCTBL_AMT_INP",
+    "NCH_BENE_PTA_COINSRNC_LBLTY_AM_INP",
+    "NCH_BENE_BLOOD_DDCTBL_LBLTY_AM_INP",
+    "TotalOutpatientVist",
+    "CLM_UTLZTN_DAY_CNT_INP",
+]
+#%%
+def gender_readmission_bar_chart():
+    data = (
+        inpatient_target.drop_duplicates(subset=["BENE_SEX_IDENT_CD", "DESYNPUF_ID"])
+        .groupby(["BENE_SEX_IDENT_CD", "IsReadmitted"])["DESYNPUF_ID"]
+        .count()
+        .reset_index()
+    )
+    fig = px.bar(
+        data_frame=data,
+        x="BENE_SEX_IDENT_CD",
+        y="DESYNPUF_ID",
+        facet_col="IsReadmitted",
+        text="DESYNPUF_ID",
+        color="BENE_SEX_IDENT_CD",
+        labels={"BENE_SEX_IDENT_CD": "PATIENT GENDER", "DESYNPUF_ID": "PATIENT COUNT"},
+    )
+    fig.update_traces(textposition="outside",)
+    return fig
+
+
 def continuous_col_box_plot():
     """
     docstring
     """
-    continous_cols = [
-        "BENE_HI_CVRAGE_TOT_MONS",
-        "BENE_SMI_CVRAGE_TOT_MONS",
-        "BENE_HMO_CVRAGE_TOT_MONS",
-        "PLAN_CVRG_MOS_NUM",
-        "MEDREIMB_IP",
-        "BENRES_IP",
-        "PPPYMT_IP",
-        "MEDREIMB_OP",
-        "BENRES_OP",
-        "PPPYMT_OP",
-        "MEDREIMB_CAR",
-        "BENRES_CAR",
-        "PPPYMT_CAR",
-        "NCH_PRMRY_PYR_CLM_PD_AMT_INP",
-        "CLM_PASS_THRU_PER_DIEM_AMT_INP",
-        "NCH_BENE_IP_DDCTBL_AMT_INP",
-        "NCH_BENE_PTA_COINSRNC_LBLTY_AM_INP",
-        "NCH_BENE_BLOOD_DDCTBL_LBLTY_AM_INP",
-        "TotalOutpatientVist",
-        "CLM_UTLZTN_DAY_CNT_INP",
-        "Age",
-    ]
     figure = px.box(
-        data_frame=inpatient_target[continous_cols],
+        data_frame=inpatient_target[continous_cols + ["IsReadmitted"]],
+        facet_col="IsReadmitted",
         labels={"variable": "Numerical Features"},
     )
+    figure.update_layout(yaxis=dict(domain=[0.5, 0.5]))
     return figure
 
 
-#%%
-def gender_pie_chart():
-    data = inpatient_target.drop_duplicates(
-        subset=["DESYNPUF_ID", "BENE_SEX_IDENT_CD"]
-    )["BENE_SEX_IDENT_CD"].value_counts()
-
-    fig = px.pie(data_frame=data, names=data.index, values=data.values)
-    return fig
-
-
-def race_pie_chart():
-    data = inpatient_target.drop_duplicates(subset=["DESYNPUF_ID", "BENE_RACE_CD"])[
-        "BENE_RACE_CD"
-    ].value_counts()
-
-    fig = px.pie(data_frame=data, names=data.index, values=data.values)
-    return fig
-
-
-def age_barplot():
-    labels = ["25-40", "40-55", "55-70", "70-85", "85-100"]
-    data = inpatient_target.drop_duplicates(subset=["DESYNPUF_ID", "Age"], keep="last")
-    age_data_bins = pd.cut(data["Age"], bins=5, labels=labels).value_counts()
-    figure = px.bar(
-        data_frame=age_data_bins,
-        x=age_data_bins.index,
-        y=age_data_bins.values,
-        text=age_data_bins.values,
-        labels={"index": "Age Bins", "y": "Count"},
-    )
-    figure.update_traces(textposition="outside",)
-    return figure
-
-
-def gender_race_plot():
-    """
-    docstring
-    """
+def race_readmission_bar_chart():
     data = (
-        inpatient_target.groupby(["BENE_RACE_CD", "BENE_SEX_IDENT_CD"])
-        .size()
+        inpatient_target.drop_duplicates(subset=["BENE_RACE_CD", "DESYNPUF_ID"])
+        .groupby(["BENE_RACE_CD", "IsReadmitted"])["DESYNPUF_ID"]
+        .count()
         .reset_index()
     )
-
-    figure = px.bar(
+    fig = px.bar(
         data_frame=data,
         x="BENE_RACE_CD",
-        y=0,
-        text=0,
-        color="BENE_SEX_IDENT_CD",
-        labels={
-            "BENE_RACE_CD": "RACE",
-            "0": "PATIENTS",
-            "BENE_SEX_IDENT_CD": "PATIENT GENDER",
-        },
-    )
-    figure.update_traces(textposition="outside",)
-    figure.update_layout(barmode="group",)
-    return figure
-
-
-def race_age_plot():
-    """
-    docstring
-    """
-    labels = ["25-40", "40-55", "55-70", "70-85", "85-100"]
-    inpatient_target["Age_Category"] = pd.cut(
-        inpatient_target["Age"], bins=5, labels=labels
-    )
-    data = (
-        inpatient_target.groupby(["Age_Category", "BENE_RACE_CD"]).size().reset_index()
-    )
-    figure = px.bar(
-        data_frame=data,
-        x="Age_Category",
-        y=0,
+        y="DESYNPUF_ID",
+        facet_col="IsReadmitted",
+        text="DESYNPUF_ID",
         color="BENE_RACE_CD",
-        text=0,
-        labels={
-            "Age_Category": "Age Bins",
-            "0": "PATIENTS",
-            "BENE_RACE_CD": "PATIENT RACE",
-        },
+        labels={"BENE_RACE_CD": "PATIENT GENDER", "DESYNPUF_ID": "PATIENT COUNT"},
     )
-    figure.update_layout(
-        # barmode="group",
-        title={"text": "Distribution of Race vs Age", "y": 0.9, "x": 0.5,},
-    )
-    figure.update_traces(textposition="outside",)
-
-    return figure
+    fig.update_traces(textposition="outside",)
+    return fig
 
 
-def gender_age_plot():
-    """
-    docstring
-    """
-    labels = ["25-40", "40-55", "55-70", "70-85", "85-100"]
-    inpatient_target["Age_Category"] = pd.cut(
-        inpatient_target["Age"], bins=5, labels=labels
-    )
-    data = (
-        inpatient_target.groupby(["Age_Category", "BENE_SEX_IDENT_CD"])
-        .size()
-        .reset_index()
-    )
-    figure = px.bar(
+def continuous_cols_age_scatterplot(separator):
+    data = inpatient_target.drop_duplicates(subset=["DESYNPUF_ID", "Age"], keep="last")
+    figure = px.scatter(
         data_frame=data,
-        x="Age_Category",
-        y=0,
-        text=0,
+        x="Age",
+        y=separator,
         color="BENE_SEX_IDENT_CD",
-        labels={
-            "Age_Category": "Age Bins",
-            "0": "PATIENTS",
-            "BENE_SEX_IDENT_CD": "PATIENT GENDER",
-        },
+        facet_col="IsReadmitted",
     )
-    figure.update_traces(textposition="outside",)
-    figure.update_layout(
-        barmode="group",
-        title={"text": "Distribution of Gender vs Age", "y": 0.9, "x": 0.5,},
-    )
-
+    figure.update_yaxes(automargin=True)
     return figure
 
 
-def comorbidity_plot():
+def comorbidity_plot(isReadmitted: bool):
     """
     docstring
     """
@@ -289,10 +216,14 @@ def comorbidity_plot():
     comorbidity_df = pd.DataFrame()
     for col in comorbidity_col_list:
         comorbidity_df[col] = inpatient_target[col].map(map_dict)
+    comorbidity_df["Target"] = inpatient_target["IsReadmitted"]
 
     data = (
-        comorbidity_df[comorbidity_col_list].apply(pd.Series.value_counts).reset_index()
+        comorbidity_df[comorbidity_df["Target"] == isReadmitted]
+        .apply(pd.Series.value_counts)
+        .reset_index()
     )
+    data = data.iloc[:-1, :-1]
     data = data.melt(id_vars="index")
     figure = px.bar(
         data_frame=data,
@@ -309,7 +240,13 @@ def comorbidity_plot():
     figure.update_traces(textposition="outside",)
     figure.update_layout(
         barmode="group",
-        title={"text": "Co-morbidity in population", "y": 0.9, "x": 0.5,},
+        title={
+            "text": "Co-morbidity in population With Readmitted = 1"
+            if isReadmitted
+            else "Co-morbidity in population With Readmitted = 0",
+            "y": 0.95,
+            "x": 0.5,
+        },
     )
     return figure
 
@@ -319,9 +256,9 @@ def prvdr_num_plot():
     docstring
     """
     data = (
-        inpatient_target[["DESYNPUF_ID", "PRVDR_NUM_CAT"]]
+        inpatient_target[["DESYNPUF_ID", "PRVDR_NUM_CAT", "IsReadmitted"]]
         .drop_duplicates()
-        .groupby(["PRVDR_NUM_CAT"])["DESYNPUF_ID"]
+        .groupby(["PRVDR_NUM_CAT", "IsReadmitted"])["DESYNPUF_ID"]
         .size()
         .reset_index()
     )
@@ -330,6 +267,7 @@ def prvdr_num_plot():
         x="PRVDR_NUM_CAT",
         y="DESYNPUF_ID",
         text="DESYNPUF_ID",
+        facet_col="IsReadmitted",
         labels={"PRVDR_NUM_CAT": "PROVIDER TYPES", "DESYNPUF_ID": "PATIENTS COUNT",},
     )
     figure.update_traces(textposition="outside",)
@@ -337,7 +275,7 @@ def prvdr_num_plot():
         barmode="group",
         title={
             "text": "Population visiting different Provider types",
-            "y": 0.9,
+            "y": 0.95,
             "x": 0.5,
         },
     )
@@ -349,9 +287,9 @@ def procedure_code_plot():
     docstring
     """
     data = (
-        inpatient_target[["DESYNPUF_ID", "ICD9_PRCDR_CD_1_INP_CAT"]]
+        inpatient_target[["DESYNPUF_ID", "ICD9_PRCDR_CD_1_INP_CAT", "IsReadmitted"]]
         .drop_duplicates()
-        .groupby(["ICD9_PRCDR_CD_1_INP_CAT"])["DESYNPUF_ID"]
+        .groupby(["ICD9_PRCDR_CD_1_INP_CAT", "IsReadmitted"])["DESYNPUF_ID"]
         .size()
         .reset_index()
     )
@@ -364,16 +302,17 @@ def procedure_code_plot():
             "ICD9_PRCDR_CD_1_INP_CAT": "PROCEDURE GROUPS",
             "DESYNPUF_ID": "PATIENTS COUNT",
         },
+        facet_col="IsReadmitted",
     )
     figure.update_traces(textposition="outside",)
     figure.update_layout(
         barmode="group",
-        title={"text": "PROCEDURE PERFORMED ON PATIENT", "y": 0.9, "x": 0.5,},
+        title={"text": "PROCEDURE PERFORMED ON PATIENT", "y": 0.95, "x": 0.5,},
     )
     return figure
 
 
-def diagnosis_code_plot():
+def diagnosis_code_plot(isReadmitted: bool):
     """
     docstring
     """
@@ -389,7 +328,9 @@ def diagnosis_code_plot():
 
     for index, col in enumerate(diagnosis_category):
         data = (
-            inpatient_target[["DESYNPUF_ID", col]]
+            inpatient_target.loc[
+                inpatient_target["IsReadmitted"] == isReadmitted, ["DESYNPUF_ID", col]
+            ]
             .drop_duplicates()
             .groupby(col)["DESYNPUF_ID"]
             .size()
@@ -407,36 +348,37 @@ def diagnosis_code_plot():
             row=(index // 2) + 1,
             col=(index % 2) + 1,
         )
-    figure.update_layout(height=1200, title_text="Diagnosis Code vs Patient Count")
+    figure.update_layout(
+        height=1200,
+        title_text="Diagnosis Code vs Patient Count With Readmitted = 1"
+        if isReadmitted
+        else "Diagnosis Code vs Patient Count With Readmitted = 0",
+    )
     return figure
 
 
 #%%
 tab_1_layout = html.Div(
     [
-        # html.H3('Patient Demographics'),
         html.Div(
             [
                 html.Div(
                     [
                         html.H6("Gender", style={"textAlign": "center"}),
-                        dcc.Graph(id="gender-graph-1", figure=gender_pie_chart(),),
+                        dcc.Graph(
+                            id="gender-graph-1", figure=gender_readmission_bar_chart(),
+                        ),
                     ],
-                    className="four columns",
+                    className="six columns",
                 ),
                 html.Div(
                     [
                         html.H6("Race", style={"textAlign": "center"}),
-                        dcc.Graph(id="race-graph-2", figure=race_pie_chart()),
+                        dcc.Graph(
+                            id="race-graph-2", figure=race_readmission_bar_chart()
+                        ),
                     ],
-                    className="four columns",
-                ),
-                html.Div(
-                    [
-                        html.H6("Age", style={"textAlign": "center"}),
-                        dcc.Graph(id="age-graph-3", figure=age_barplot(),),
-                    ],
-                    className="four columns",
+                    className="six columns",
                 ),
             ],
             className="row",
@@ -446,34 +388,16 @@ tab_1_layout = html.Div(
             [
                 html.Div(
                     [
-                        html.H6(
-                            "Race - Gender Distribution", style={"textAlign": "center"}
+                        html.H6(f"Age vs {col}", style={"textAlign": "center"}),
+                        dcc.Graph(
+                            id=f"age-{col}-graph-{str(index)}",
+                            figure=continuous_cols_age_scatterplot(col),
                         ),
-                        dcc.Graph(id="race_gender-graph-4", figure=gender_race_plot(),),
                     ],
-                    className="four columns",
-                ),
-                html.Div(
-                    [
-                        html.H6(
-                            "Age - Gender Distribution", style={"textAlign": "center"}
-                        ),
-                        dcc.Graph(id="age-gender-graph-5", figure=gender_age_plot(),),
-                    ],
-                    className="four columns",
-                ),
-                html.Div(
-                    [
-                        html.H6(
-                            "Race - Age Distribution", style={"textAlign": "center"},
-                        ),
-                        dcc.Graph(id="age-race-graph-6", figure=race_age_plot(),),
-                    ],
-                    className="four columns",
-                ),
+                    className="row",
+                )
+                for index, col in enumerate(continous_cols)
             ],
-            className="row",
-            style={"margin": "1% 3%"},
         ),
         html.Div(
             [
@@ -483,16 +407,23 @@ tab_1_layout = html.Div(
                             "Patient Comorbidity Distribution",
                             style={"textAlign": "center"},
                         ),
-                        dcc.Graph(id="comorbidity-graph-7", figure=comorbidity_plot(),),
+                        dcc.Graph(
+                            id="comorbidity-no-readmitted-graph-7",
+                            figure=comorbidity_plot(False),
+                        ),
                     ],
                     className="six columns",
                 ),
                 html.Div(
                     [
                         html.H6(
-                            "Provider Num Distribution", style={"textAlign": "center"}
+                            "Patient Comorbidity Distribution",
+                            style={"textAlign": "center"},
                         ),
-                        dcc.Graph(id="prvdr_num-graph-8", figure=prvdr_num_plot(),),
+                        dcc.Graph(
+                            id="comorbidity-readmitted-graph-7",
+                            figure=comorbidity_plot(True),
+                        ),
                     ],
                     className="six columns",
                 ),
@@ -517,15 +448,30 @@ tab_1_layout = html.Div(
                 html.Div(
                     [
                         html.H6(
-                            "Outliers in Continuous Variables",
+                            "Provider Num Distribution", style={"textAlign": "center"}
+                        ),
+                        dcc.Graph(id="prvdr_num-graph-8", figure=prvdr_num_plot(),),
+                    ],
+                    className="six columns",
+                ),
+            ],
+            className="row",
+            style={"margin": "1% 3%"},
+        ),
+        html.Div(
+            [
+                html.Div(
+                    [
+                        html.H6(
+                            "Box Plot Distribution of Continuous Variables",
                             style={"textAlign": "center"},
                         ),
                         dcc.Graph(
-                            id="continuous_col-box-graph-10",
+                            id="continuous_cols-box-graph-11",
                             figure=continuous_col_box_plot(),
                         ),
                     ],
-                    className="six columns",
+                    className="twelve columns",
                 ),
             ],
             className="row",
@@ -540,7 +486,27 @@ tab_1_layout = html.Div(
                             style={"textAlign": "center"},
                         ),
                         dcc.Graph(
-                            id="diagnosis_code-graph-11", figure=diagnosis_code_plot(),
+                            id="diagnosis_code-readmitted-graph-10",
+                            figure=diagnosis_code_plot(True),
+                        ),
+                    ],
+                    className="twelve columns",
+                ),
+            ],
+            className="row",
+            style={"margin": "1% 3%"},
+        ),
+        html.Div(
+            [
+                html.Div(
+                    [
+                        html.H6(
+                            "Disease Category for Patient",
+                            style={"textAlign": "center"},
+                        ),
+                        dcc.Graph(
+                            id="diagnosis_code-not-readmitted-graph-11",
+                            figure=diagnosis_code_plot(False),
                         ),
                     ],
                     className="twelve columns",
