@@ -1,3 +1,4 @@
+#%%
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -20,6 +21,7 @@ numerical_fields = {
     "MEDREIMB_CAR": 1250,
     "BENRES_CAR": 470,
     "PPPYMT_CAR": 30,
+    "Age": 65,
     "CLM_PMT_AMT_INP": 6000,
     "NCH_PRMRY_PYR_CLM_PD_AMT_INP": 0.0,
     "CLM_PASS_THRU_PER_DIEM_AMT_INP": 30,
