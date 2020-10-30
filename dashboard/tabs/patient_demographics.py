@@ -102,7 +102,7 @@ def preprocess_data(dataframe: pd.DataFrame):
 
 
 #%%
-inpatient_target = pd.read_sql("SELECT * FROM InPatient_Target", con=conn_object)
+inpatient_target = pd.read_csv(r"..\dashboard\data\data.csv")
 inpatient_target = preprocess_data(inpatient_target)
 
 #%%
@@ -137,6 +137,7 @@ def continuous_col_box_plot():
         data_frame=inpatient_target[continous_cols],
         labels={"variable": "Numerical Features"},
     )
+    figure.update_xaxes(tickangle=45)
     return figure
 
 

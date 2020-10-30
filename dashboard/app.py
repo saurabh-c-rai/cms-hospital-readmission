@@ -3,7 +3,7 @@ import dash
 from dash.dependencies import Input, Output, State
 import dash_html_components as html
 import dash_core_components as dcc
-from dashboard.tabs import (
+from dashboard.tabs import (  # pylint: disable=import-error
     patient_demographics,
     patient_med_readmit,
     readmission_plots,

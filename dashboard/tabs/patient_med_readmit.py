@@ -4,7 +4,10 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
 import pandas as pd
-from dashboard.tabs.patient_demographics import preprocess_data, inpatient_target
+from dashboard.tabs.patient_demographics import (  # pylint: disable=import-error
+    preprocess_data,
+    inpatient_target,
+)
 
 #%%
 numerical_fields = {
@@ -106,7 +109,7 @@ map_procedure_code = [
 map_diagnosis_code = [
     {"label": diag_code, "value": diag_code}
     for diag_code in diagnosid_code_category
-    if diag_code
+    if not pd.isnull(diag_code)
 ]
 #%%
 tab_2_layout = html.Div(
