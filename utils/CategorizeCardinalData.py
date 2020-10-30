@@ -91,9 +91,9 @@ class DiagnosisCodeCategoryCreator(object):
         response = requests.get(
             config[2]["ICD9_DIAGNOSIS_CODE_CATEGORY_URL"], verify=False
         )
-        icd_code_categories = pd.read_html(response.text)[0]
+        self.icd_code_categories = pd.read_html(response.text)[0]
         icd_diagnosis_code_bin = [
-            x for x in icd_code_categories["Code Range"].str.split("-")
+            x for x in self.icd_code_categories["Code Range"].str.split("-")
         ]
         return icd_diagnosis_code_bin
 
@@ -147,6 +147,11 @@ class DiagnosisCodeCategoryCreator(object):
             self.find_diagnosis_code_category
         )
         self.unique_diagnosis_code_category_df.drop_duplicates(inplace=True)
+        self.unique_diagnosis_code_category_df = self.unique_diagnosis_code_category_df.merge(
+            right=self.icd_code_categories,
+            left_on="Diagnosis_code_CAT",
+            right_on="Code Range",
+        )
 
 
 #%%
@@ -248,7 +253,6 @@ class HCPCSCodeCategoryCreator(object):
         "82003": "80329",
         "80100": "G0430",
         "80101": "G0431",
-        "82003": "G6039",
         "77031": "19081",
         "77032": "19082",
         "99144": "99152",
@@ -349,8 +353,8 @@ class HCPCSCodeCategoryCreator(object):
 
 #%%
 if __name__ == "__main__":
-    # inpatient_file = FetchSubset(subset_List=[2]).fetchFromInpatientDataset()
-    # outpatient_file = FetchSubset(subset_List=[2]).fetchFromOutpatientDataset()
+    # inpatient_file = FetchSubset(subset_list=[2]).fetchFromInpatientDataset()
+    # outpatient_file = FetchSubset(subset_list=[2]).fetchFromOutpatientDataset()
     create_provider_category = ProviderNumCategoryCreator()
     diagnosis_code = DiagnosisCodeCategoryCreator()
     procedure_code = ProcedureCodeCategoryCreator()

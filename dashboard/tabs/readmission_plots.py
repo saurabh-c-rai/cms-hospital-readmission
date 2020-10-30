@@ -8,7 +8,7 @@ from dash.dependencies import Input, Output
 import plotly.graph_objects as go
 import sqlite3
 import plotly.express as px
-from utils.CategorizeCardinalData import (
+from utils.CategorizeCardinalData import (  # pylint: disable=import-error
     ProviderNumCategoryCreator,
     ProcedureCodeCategoryCreator,
     DiagnosisCodeCategoryCreator,
