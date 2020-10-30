@@ -102,8 +102,44 @@ def preprocess_data(dataframe: pd.DataFrame):
 
 
 #%%
-inpatient_target = pd.read_sql("SELECT * FROM InPatient_Target", con=conn_object)
+inpatient_target = pd.read_csv(r"..\dashboard\data\data.csv")
 inpatient_target = preprocess_data(inpatient_target)
+
+#%%
+def continuous_col_box_plot():
+    """
+    docstring
+    """
+    continous_cols = [
+        "BENE_HI_CVRAGE_TOT_MONS",
+        "BENE_SMI_CVRAGE_TOT_MONS",
+        "BENE_HMO_CVRAGE_TOT_MONS",
+        "PLAN_CVRG_MOS_NUM",
+        "MEDREIMB_IP",
+        "BENRES_IP",
+        "PPPYMT_IP",
+        "MEDREIMB_OP",
+        "BENRES_OP",
+        "PPPYMT_OP",
+        "MEDREIMB_CAR",
+        "BENRES_CAR",
+        "PPPYMT_CAR",
+        "NCH_PRMRY_PYR_CLM_PD_AMT_INP",
+        "CLM_PASS_THRU_PER_DIEM_AMT_INP",
+        "NCH_BENE_IP_DDCTBL_AMT_INP",
+        "NCH_BENE_PTA_COINSRNC_LBLTY_AM_INP",
+        "NCH_BENE_BLOOD_DDCTBL_LBLTY_AM_INP",
+        "TotalOutpatientVist",
+        "CLM_UTLZTN_DAY_CNT_INP",
+        "Age",
+    ]
+    figure = px.box(
+        data_frame=inpatient_target[continous_cols],
+        labels={"variable": "Numerical Features"},
+    )
+    figure.update_xaxes(tickangle=45)
+    return figure
+
 
 #%%
 def gender_pie_chart():
@@ -477,7 +513,20 @@ tab_1_layout = html.Div(
                             id="procedure_code-graph-9", figure=procedure_code_plot(),
                         ),
                     ],
-                    className="twelve columns",
+                    className="six columns",
+                ),
+                html.Div(
+                    [
+                        html.H6(
+                            "Outliers in Continuous Variables",
+                            style={"textAlign": "center"},
+                        ),
+                        dcc.Graph(
+                            id="continuous_col-box-graph-10",
+                            figure=continuous_col_box_plot(),
+                        ),
+                    ],
+                    className="six columns",
                 ),
             ],
             className="row",
@@ -492,7 +541,7 @@ tab_1_layout = html.Div(
                             style={"textAlign": "center"},
                         ),
                         dcc.Graph(
-                            id="diagnosis_code-graph-10", figure=diagnosis_code_plot(),
+                            id="diagnosis_code-graph-11", figure=diagnosis_code_plot(),
                         ),
                     ],
                     className="twelve columns",
