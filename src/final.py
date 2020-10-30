@@ -123,7 +123,7 @@ N_JOB_PARAM_VALUE = config[3]["N_JOB_PARAM_VALUE"]
 VERBOSE_PARAM_VALUE = config[3]["VERBOSE_PARAM_VALUE"]
 
 # %%
-data = ExtractData.FetchSubset(subset_list=[15])
+data = ExtractData.FetchSubset(subset_list=[2])
 
 # %%
 data_inpatient_claims = data.fetchFromInpatientDataset()
@@ -189,7 +189,7 @@ for col in diagnosis_code:
         left_on=col,
         right_on="Diagnosis_code",
         how="left",
-    )["Diagnosis_code_CAT"]
+    )["Description"]
 
 # %%
 # Create a year column for merging with beneficiary summary data
@@ -314,7 +314,7 @@ for col in diagnosis_code_out:
         left_on=col,
         right_on="Diagnosis_code",
         how="left",
-    )["Diagnosis_code_CAT"]
+    )["Description"]
 #%%
 data_outpatient_claim.columns = [
     "DESYNPUF_ID" if col == "DESYNPUF_ID" else col + "_OUT"
@@ -420,7 +420,7 @@ final_inpatient_data.columns = [
     for col in final_inpatient_data
 ]
 
-
+final_inpatient_data.rename(columns={"IsReadmitted_INP": "IsReadmitted"}, inplace=True)
 # %%
 final_df = pd.merge(
     left=combined_beneficiary_data_2,
