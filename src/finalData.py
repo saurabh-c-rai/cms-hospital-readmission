@@ -100,6 +100,7 @@ from utils.CustomPipeline import (
     CardinalityReducer,
     SelectColumnsTransfomer,
     get_ct_feature_names,
+    CategoricalVariableImputer,
 )
 from utils.feature_importance import FeatureImportance
 
@@ -412,9 +413,7 @@ std_scalar = StandardScaler()
 min_max_scalar = MinMaxScaler()
 onehot_encoder = OneHotEncoder(drop="first", sparse=False)
 median_imputer = SimpleImputer(strategy="median", missing_values=np.nan)
-constant_imputer = SimpleImputer(
-    strategy="constant", fill_value=MISSING_VALUE_LABEL, missing_values=np.nan
-)
+constant_imputer = CategoricalVariableImputer(fill_value=MISSING_VALUE_LABEL)
 ordinal_encoder = OrdinalEncoder()
 
 
