@@ -84,7 +84,7 @@ def render_content(tab, toggle_value):
     [State(f"{_}", "value") for _ in ALLOWED_FIELDS],
 )
 def get_prediction_from_model(n_clicks, *args):
-    if n_clicks > 1:
+    if n_clicks >= 1:
         payload = dict(zip(ALLOWED_FIELDS, [arg for arg in (args or [])]))
         response = requests.request(
             "POST", URL, headers=HEADER, data=json.dumps([payload])
