@@ -289,11 +289,7 @@ tab_2_layout = html.Div(
                 html.Div(
                     [html.Button(id="submit-button", n_clicks=0, children="Submit"),]
                 ),
-                html.Div(
-                    id="out-all-types",
-                    children=["This should change"],
-                    className="six column",
-                ),
+                html.Div(id="out-all-types", children=["This should change"],),
             ]
         ),
     ],

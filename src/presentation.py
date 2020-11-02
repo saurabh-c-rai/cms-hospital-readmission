@@ -423,7 +423,7 @@ final_data.describe()
 data = ExtractData.FetchSubset(subset_list=[2])
 
 # %% [markdown]
-# ### L1. Identifying Beneficiaries Enrolled in Different Time Periods (Points 10)
+# ## L1. Identifying Beneficiaries Enrolled in Different Time Periods (Points 10)
 
 # %%
 # %%bigquery --project dsapac  --use_bqstorage_api final_df
@@ -436,67 +436,82 @@ data_beneficary_summary.loc[data_beneficary_summary['Year'] == 2009, "DESYNPUF_I
 data_beneficary_summary.loc[data_beneficary_summary['Year'] == 2010, "DESYNPUF_ID"]
 
 # %% [markdown]
-# ### L2. Find beneficiaries who enrolled in all three years and had at least one inpatient claim from 2008 to 2010
+# ## L2. Find beneficiaries who enrolled in all three years and had at least one inpatient claim from 2008 to 2010
 
 # %%
-data_inpatient_claims = pd.read_sql_query("SELECT * FROM Inpatient_claims_2", con=conn_object)
-beneficiary_record = data_beneficary_summary.groupby(['DESYNPUF_ID']).agg({"Year" : 'count'}).reset_index()
+# %%bigquery --project dsapac  --use_bqstorage_api requiredBeneficiary
+
+SELECT * FROM dsapac.CMS.BeneficiariesWithOneClaim
 
 # %%
-required_beneficiary = beneficiary_record[beneficiary_record['Year'] == 3]
-
-# %%
-dataframe = data_inpatient_claims[data_inpatient_claims['DESYNPUF_ID'].isin(required_beneficiary['DESYNPUF_ID'])]
-
-# %%
-dataframe['DESYNPUF_ID']
-
-# %%
-# del beneficiary_record, required_beneficiary, dataframe, data_inpatient_claims
-# gc.collect()
+requiredBeneficiary
 
 # %% [markdown]
-# ### L3. Number of Claims per Beneficiary by Service Type Over Three Years
+# ## L3. Number of Claims per Beneficiary by Service Type Over Three Years
 
 # %%
-data_carrier_claim_A = data.fetchFromCarrierClaimsDataset(claim_type='A')
+beneficiary_by_service_type.loc[beneficiary_by_service_type['YearOfAdmission']==2010, ['InpatientClaims','OutpatientClaims', 'CarrierClaims']].melt().groupby("variable").agg({"value":"sum"})
+
+# %%
+beneficiary_by_service_type.groupby(["DESYNPUF_ID", "YearOfAdmission"]).sum()
 
 # %%
 # del data_carrier_claim_A
 # gc.collect()
 
 # %% [markdown]
-# ### L4. Create following data tables with required formatting as follows 
+# ## L4. Create following data tables with required formatting as follows 
+
+# %%
+# %%bigquery --project dsapac  --use_bqstorage_api demo_dist
+
+SELECT * FROM dsapac.CMS.Demography_Distribution
 
 # %% [markdown]
-# #### Demography distribution data
+# ### Distribution by Birth Year
 
 # %%
-data_beneficary_summary.columns
-
-# %%
-data_beneficary_summary.drop_duplicates(subset=['DESYNPUF_ID']).groupby(["BENE_SEX_IDENT_CD"]).agg({"DESYNPUF_ID" : "count"})
-
-# %%
-data_beneficary_summary.drop_duplicates(subset=['DESYNPUF_ID']).groupby(["BENE_RACE_CD"]).agg({"DESYNPUF_ID" : "count"})
-
-# %%
-data_beneficary_summary.loc[(data_beneficary_summary['BENE_BIRTH_DT'].dt.year < 1924), "BIRTH_YEAR_CAT"] = "Pre-1924"
-data_beneficary_summary.loc[(data_beneficary_summary['BENE_BIRTH_DT'].dt.year > 1943), "BIRTH_YEAR_CAT"] = "Post-1943"
-
-# %%
-data_beneficary_summary.loc[(1924 <= data_beneficary_summary['BENE_BIRTH_DT'].dt.year) & (data_beneficary_summary['BENE_BIRTH_DT'].dt.year <= 1928), "BIRTH_YEAR_CAT"] = "1924-1928"
-data_beneficary_summary.loc[(1929 <= data_beneficary_summary['BENE_BIRTH_DT'].dt.year) & (data_beneficary_summary['BENE_BIRTH_DT'].dt.year <= 1933), "BIRTH_YEAR_CAT"] = "1929-1933"
-data_beneficary_summary.loc[(1934 <= data_beneficary_summary['BENE_BIRTH_DT'].dt.year) & (data_beneficary_summary['BENE_BIRTH_DT'].dt.year <= 1938), "BIRTH_YEAR_CAT"] = "1934-1938"
-data_beneficary_summary.loc[(1939 <= data_beneficary_summary['BENE_BIRTH_DT'].dt.year) & (data_beneficary_summary['BENE_BIRTH_DT'].dt.year <= 1943), "BIRTH_YEAR_CAT"] = "1939-1943"
-
-# %%
-data_beneficary_summary.drop_duplicates(subset=['DESYNPUF_ID']).groupby(["BIRTH_YEAR_CAT"]).agg({"DESYNPUF_ID" : "count"})
+demo_dist.loc[ :, ['YearofAdmission','YearSpan', 'PercentBirthYear']].drop_duplicates().sort_values(by=["YearofAdmission", "YearSpan"])
 
 # %% [markdown]
-# #### Reimbursement by Source Year
+# ### Distribution by Gender
 
 # %%
+demo_dist.loc[ :, ["BENE_SEX_IDENT_CD", "PercentSex"]].drop_duplicates()
+
+# %% [markdown]
+# ### Distribution by Race
+
+# %%
+demo_dist.loc[ :, ["YearofAdmission", "BENE_RACE_CD", "PercentRace"]].sort_values(by=["YearofAdmission"]).drop_duplicates(subset=["BENE_RACE_CD", "PercentRace"])
+
+# %%
+# %%bigquery --project dsapac  --use_bqstorage_api demo_dist
+
+SELECT * FROM dsapac.CMS.Demography_Distribution
+
+#### Distribution by Birth Year
+
+demo_dist.loc[ :, ['YearofAdmission','YearSpan', 'PercentBirthYear']].drop_duplicates().sort_values(by=["YearofAdmission", "YearSpan"])
+
+#### Distribution by Gender
+
+demo_dist.loc[ :, ["BENE_SEX_IDENT_CD", "PercentSex"]].drop_duplicates()
+
+### Distribution by Race
+
+demo_dist.loc[ :, ["YearofAdmission", "BENE_RACE_CD", "PercentRace"]].sort_values(by=["YearofAdmission"]).drop_duplicates(subset=["BENE_RACE_CD", "PercentRace"])
+
+# %% [markdown]
+# ### Reimbursement by Source Year
+
+# %%
+# %%bigquery --project dsapac  --use_bqstorage_api reimbursement_details
+
+SELECT * FROM dsapac.CMS.ReimbursementSourceYear
+
+# %%
+reimbursement_details
 
 # %% [markdown]
 # # Data Processing
