@@ -2411,6 +2411,10 @@ ensemble_trainer.train_test_model(voting_clf)
 # 1. Proper initial diagnosis - In many of the cases ADMTING_ICD9_DIAGNOSIS_CODE differs from the actual diagnosis
 # 2. Patient followup post discharge. Patient having high no. of outpatient visit (follow-ups) have less chances of readmission
 # 3. Special attention to old patient and patients with co-morbidity
+# 4. Medication counseling by pharmacists
+# 5. Self-management education programs
+# 6. Tele-homecare and remote patient monitoring
+# 7. Specialized discharge teams and discharge planners
 
 # %% [markdown]
 # ## What's cost saving and projection for next few years if providers utilize these models?
